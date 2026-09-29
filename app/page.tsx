@@ -1,4 +1,5 @@
 import SmoothScroll from "@/components/SmoothScroll";
+import DropCursor from "@/components/DropCursor";
 import Navbar from "@/components/Navbar";
 import OutageBanner from "@/components/OutageBanner";
 import Hero from "@/components/sections/Hero";
@@ -28,6 +29,7 @@ export default function Home() {
       </main>
       <Contact />
       <OutageBanner />
+      <DropCursor />
     </>
   );
 }

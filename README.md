@@ -30,7 +30,9 @@ components/
   SmoothScroll.tsx       Lenis ↔ ScrollTrigger синк
   Navbar.tsx             desktop цэс + mobile ☰
   OutageBanner.tsx       "ОДОО: ус тасалдсан" мэдэгдэл
-  three/WaterSurface.tsx Hero-ийн WebGL усны shader (mouse ripple, гэрэл, zoom)
+  DropCursor.tsx         усны дусал хэлбэртэй хулганы заагч (сунах, томрох, цацрах)
+  three/WaterSurface.tsx WebGL усны shader (mouse ripple, гэрэл, zoom)
+  three/HeroWater.tsx    Hero: тунгалаг усан доорх гарчиг (долгионы симуляц, дусал, caustic, scroll-оор шумбана)
   sections/
     Hero.tsx             01 УС БҮХНИЙ ЭХЛЭЛ
     WaterJourney.tsx     02 УСНЫ АЯЛАЛ (6 үе шат, sticky progress rail)
