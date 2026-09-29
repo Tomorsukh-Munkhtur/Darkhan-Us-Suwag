@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { journey } from "@/lib/content";
@@ -17,6 +18,8 @@ import {
 } from "./journey/Visuals";
 
 gsap.registerPlugin(ScrollTrigger);
+
+const WaterSurface = dynamic(() => import("@/components/three/WaterSurface"), { ssr: false });
 
 const visuals: Record<string, React.FC> = {
   source: SourceVisual,
@@ -48,6 +51,16 @@ export default function WaterJourney() {
   const shownRef = useRef(0);
   const busy = useRef(false);
   const visualTl = useRef<gsap.core.Timeline | null>(null);
+  // арын усны гадаргуу: зөвхөн хэсэг дэлгэцэн дээр байхад л зурна
+  const [surface, setSurface] = useState<{ reduced: boolean } | null>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    setSurface({ reduced: window.matchMedia("(prefers-reduced-motion: reduce)").matches });
+    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting));
+    io.observe(root.current!);
+    return () => io.disconnect();
+  }, []);
 
   // Харагдаж буй шатны зураг: тухайн шатны эхний 75%-д анимац нь дуусна
   const visualTarget = () => gsap.utils.clamp(0, 1, (progress.current * N - shownRef.current) / 0.75);
@@ -155,7 +168,11 @@ export default function WaterJourney() {
 
   return (
     // motion-safe:-mt-[100svh]: Hero-ийн шумбах замын ард байрлана (Hero.tsx)
-    <section id="journey" ref={root} className="relative bg-foam pt-24 motion-safe:-mt-[100svh] sm:pt-32">
+    <section id="journey" ref={root} className="relative bg-foam pt-24 [clip-path:inset(0)] motion-safe:-mt-[100svh] sm:pt-32">
+      {/* арын бүдэг усны гадаргуу (Hero-гийн усны бүдэг хувилбар): caustic тор, давалгаа, хулганы долгио */}
+      <div aria-hidden className="water-pattern">
+        {surface && <WaterSurface running={inView} reduced={surface.reduced} />}
+      </div>
       <svg aria-hidden className="absolute h-0 w-0">
         <filter id="journey-water">
           <feTurbulence type="fractalNoise" baseFrequency="0.008 0.04" numOctaves={2} seed={3} />

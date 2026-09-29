@@ -31,11 +31,11 @@ components/
   Navbar.tsx             desktop цэс + mobile ☰
   OutageBanner.tsx       "ОДОО: ус тасалдсан" мэдэгдэл
   DropCursor.tsx         усан дусал линз: доорх бүхнийг хугалж томруулна (backdrop-filter SVG, Chrome/Edge; бусад хөтөчид энгийн шил), төвд цэг, дарахад цацарна
-  three/WaterSurface.tsx WebGL усны shader (mouse ripple, гэрэл, zoom)
+  three/WaterSurface.tsx WaterJourney-ийн ард бүдэг усны гадаргуу (caustic, давалгаа, хулганы долгио)
   three/HeroWater.tsx    Hero: тунгалаг усан доорх гарчиг (долгионы симуляц, дусал, caustic); scroll-оор гадаргууг нэвтлэн шумбаж (цацраг, бөмбөлөг), ард нь WaterJourney тодорно
   sections/
     Hero.tsx             01 УС БҮХНИЙ ЭХЛЭЛ
-    WaterJourney.tsx     02 УСНЫ АЯЛАЛ (нэг тогтсон самбар: 6 шат ус угаах шилжилтээр солигдоно)
+    WaterJourney.tsx     02 УСНЫ АЯЛАЛ (нэг тогтсон самбар: 6 шат ус угаах шилжилтээр солигдоно; ард нь бүдэг усны гадаргуу)
     journey/Visuals.tsx  үе шат бүрийн SVG animation (шатны явцаар удирдагдана)
     journey/DripDots.tsx шатны хуудаслалт: дусал дусна, буцахад бөмбөлөг хөөрнө
     Services.tsx         03 Бидний үйл ажиллагаа

@@ -181,6 +181,17 @@ body {
 }
 
 /* ---- Усны аялал (WaterJourney.tsx) ---- */
+/* арын бүдэг усны гадаргуу (WaterSurface.tsx): section-ийн clip-path-аар зөвхөн энэ хэсэгт харагдана.
+   Дэлгэцийн хэмжээтэй fixed давхарга; картын ард (голд) улам бүдэг. */
+.water-pattern {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(ellipse 60% 55% at 50% 55%, rgb(0 0 0 / 0.3), #000 85%);
+  mask-image: radial-gradient(ellipse 60% 55% at 50% 55%, rgb(0 0 0 / 0.3), #000 85%);
+}
 /* шат солигдоход картыг доороос угааж өнгөрөх ус */
 .stage-wave {
   position: absolute;
