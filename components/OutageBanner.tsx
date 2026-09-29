@@ -36,7 +36,7 @@ export default function OutageBanner() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.25 }}
-            className="relative w-[calc(100vw-2rem)] max-w-sm origin-bottom-right rounded-2xl border border-alert/40 bg-abyss/90 p-5 shadow-2xl backdrop-blur-xl"
+            className="relative w-[calc(100vw-2rem)] max-w-sm origin-bottom-right rounded-2xl border border-alert/40 bg-white/90 p-5 shadow-2xl shadow-abyss/15 backdrop-blur-xl"
             role="status"
           >
             <button
@@ -44,7 +44,7 @@ export default function OutageBanner() {
                 setPinned(true);
                 setExpanded(false);
               }}
-              className="absolute right-4 top-3 text-lg text-mist hover:text-foam"
+              className="absolute right-4 top-3 text-lg text-mist hover:text-abyss"
               aria-label="Хураах"
             >
               ×
@@ -53,7 +53,7 @@ export default function OutageBanner() {
               <span className="h-2 w-2 animate-pulse rounded-full bg-alert" /> ОДОО
             </p>
             <p className="mt-2 font-display text-lg">{o.area}</p>
-            <p className="text-sm text-foam/85">{o.title}</p>
+            <p className="text-sm text-abyss/85">{o.title}</p>
             <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-mist">
               <span>Шалтгаан: {o.reason}</span>
               <span>Хугацаа: {o.time}</span>
@@ -73,12 +73,12 @@ export default function OutageBanner() {
               setPinned(true);
               setExpanded(true);
             }}
-            className="flex items-center gap-2 rounded-full border border-alert/40 bg-abyss/90 px-4 py-2.5 text-xs backdrop-blur-xl"
+            className="flex items-center gap-2 rounded-full border border-alert/40 bg-white/90 px-4 py-2.5 text-xs shadow-lg shadow-abyss/10 backdrop-blur-xl"
             aria-label="Ус тасалдлын мэдээлэл"
           >
             <span className="h-2 w-2 animate-pulse rounded-full bg-alert" />
             <span className="text-alert">ЗАСВАР</span>
-            <span className="text-foam/80">· {o.area}</span>
+            <span className="text-abyss/80">· {o.area}</span>
           </motion.button>
         )}
       </AnimatePresence>

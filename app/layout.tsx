@@ -8,10 +8,12 @@ const manrope = Manrope({
   display: "swap",
 });
 
+// Unbounded-д Ү ү Ө ө үсэг байхгүй → Arial fallback-ын оронд Manrope-оор харагдуулна (globals.css --font-display)
 const unbounded = Unbounded({
   subsets: ["latin", "cyrillic", "cyrillic-ext"],
   variable: "--font-unbounded",
   display: "swap",
+  adjustFontFallback: false,
 });
 
 export const metadata: Metadata = {
@@ -21,7 +23,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#020b14",
+  themeColor: "#f5fbff",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -33,9 +33,9 @@ export default function Contact() {
         </motion.h2>
 
         <div className="mt-16 grid gap-10 lg:grid-cols-[1.4fr_1fr]">
-          <dl className="grid gap-px overflow-hidden rounded-3xl bg-white/5 sm:grid-cols-2">
+          <dl className="grid gap-px overflow-hidden rounded-3xl border border-abyss/10 bg-abyss/10 sm:grid-cols-2">
             {items.map((i) => (
-              <div key={i.k} className="bg-abyss p-7">
+              <div key={i.k} className="bg-white p-7">
                 <dt className="text-[11px] uppercase tracking-[0.25em] text-mist">{i.k}</dt>
                 <dd className="mt-2 font-display text-lg">
                   {i.href ? (
@@ -71,7 +71,7 @@ export default function Contact() {
       {/* Footer дээр дахин усны долгион болж төгсөнө — усны цикл дахин эхэлнэ */}
       <div className="relative mt-24">
         <svg viewBox="0 0 1440 120" preserveAspectRatio="none" className="block h-20 w-full sm:h-28" aria-hidden>
-          <path fill="#0a2a45" fillOpacity=".6">
+          <path fill="#3cc3f0" fillOpacity=".3">
             <animate
               attributeName="d"
               dur="9s"
@@ -79,7 +79,7 @@ export default function Contact() {
               values="M0 60 C240 20 480 100 720 60 S1200 20 1440 60 V120 H0Z;M0 50 C240 90 480 30 720 70 S1200 90 1440 50 V120 H0Z;M0 60 C240 20 480 100 720 60 S1200 20 1440 60 V120 H0Z"
             />
           </path>
-          <path fill="#04182a">
+          <path fill="#e3f2fb">
             <animate
               attributeName="d"
               dur="7s"
@@ -88,12 +88,12 @@ export default function Contact() {
             />
           </path>
         </svg>
-        <div className="bg-deep">
+        <div className="bg-shallow">
           <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-12 sm:px-8 md:flex-row md:items-center md:justify-between">
             <Logo />
             <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-mist">
               {nav.map((n) => (
-                <a key={n.href} href={n.href} className="hover:text-foam">
+                <a key={n.href} href={n.href} className="hover:text-abyss">
                   {n.label}
                 </a>
               ))}

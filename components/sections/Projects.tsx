@@ -12,7 +12,7 @@ function Progress({ value }: { value: number }) {
         <span>PROJECT STATUS</span>
         <span className="text-water">{value}%</span>
       </div>
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-abyss/10">
         <motion.div
           initial={{ width: 0 }}
           whileInView={{ width: `${value}%` }}
@@ -21,7 +21,7 @@ function Progress({ value }: { value: number }) {
           className="h-full rounded-full bg-gradient-to-r from-water to-aqua"
         />
       </div>
-      <p className="mt-2 text-xs text-foam/70">{value >= 100 ? "Дууссан" : "Хэрэгжиж байна"}</p>
+      <p className="mt-2 text-xs text-abyss/70">{value >= 100 ? "Дууссан" : "Хэрэгжиж байна"}</p>
     </div>
   );
 }
@@ -80,7 +80,7 @@ export default function Projects() {
       <AnimatePresence>
         {open && (
           <motion.div
-            className="fixed inset-0 z-[60] flex items-end justify-center bg-abyss/80 p-4 backdrop-blur-md sm:items-center"
+            className="fixed inset-0 z-[60] flex items-end justify-center bg-abyss/35 p-4 backdrop-blur-md sm:items-center"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -96,15 +96,15 @@ export default function Projects() {
               exit={{ y: 60, opacity: 0, transition: { duration: 0.2 } }}
               transition={{ type: "spring", damping: 26 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative max-h-[88vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-white/10 bg-deep p-8 sm:p-10"
+              className="relative max-h-[88vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-abyss/10 bg-white p-8 shadow-2xl shadow-abyss/20 sm:p-10"
             >
-              <button onClick={() => setOpen(null)} className="absolute right-6 top-5 text-2xl text-mist hover:text-foam" aria-label="Хаах">
+              <button onClick={() => setOpen(null)} className="absolute right-6 top-5 text-2xl text-mist hover:text-abyss" aria-label="Хаах">
                 ×
               </button>
               <p className="eyebrow">PROJECT {open.n}</p>
               <h3 className="mt-3 font-display text-3xl font-semibold">{open.title}</h3>
               {/* TODO: төслийн зураг */}
-              <div className="mt-6 flex aspect-[16/7] items-center justify-center rounded-2xl bg-gradient-to-br from-navy to-abyss text-xs tracking-widest text-mist">
+              <div className="mt-6 flex aspect-[16/7] items-center justify-center rounded-2xl bg-gradient-to-br from-shallow to-aqua/30 text-xs tracking-widest text-mist">
                 ЗУРАГ
               </div>
               <dl className="mt-8 grid grid-cols-2 gap-6 text-sm">

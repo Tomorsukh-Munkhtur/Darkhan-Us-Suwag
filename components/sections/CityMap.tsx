@@ -1,214 +1,271 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { mapNodes, mapPipes, mapSewers, outages, type MapNode } from "@/lib/content";
-import SectionHeading from "../ui/SectionHeading";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { cityFlow, outages, type CityStep } from "@/lib/content";
+import DarkhanMap from "./map/DarkhanMap";
 
-const kindStyle: Record<MapNode["kind"], { color: string; label: string }> = {
-  source: { color: "#3fd0ff", label: "Усны эх үүсвэр" },
-  pump: { color: "#7fe7ff", label: "Насос станц" },
-  reservoir: { color: "#1ea4e6", label: "Усан сан" },
-  treatment: { color: "#4ee6a6", label: "Цэвэрлэх байгууламж" },
-  district: { color: "#e8f7ff", label: "Хэрэглэгчид" },
+gsap.registerPlugin(ScrollTrigger);
+
+const N = cityFlow.length;
+const PIN = 250; // pin-ий scroll урт, дэлгэцийн өндрийн %
+const STEP = (PIN * 0.9) / (N - 1); // алхам хоорондын scroll (vh); сүүлийн 10% нь эцсийн төлөвийг барина
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/** Камер: алхам бүрт газрын зургийн аль цэг (1600×900) рүү, хэр ойртох. null — бүхэлд нь. */
+const focus: ({ fx: number; fy: number; s: number } | null)[] = [
+  { fx: 300, fy: 230, s: 1.7 },
+  { fx: 580, fy: 320, s: 1.8 },
+  { fx: 600, fy: 250, s: 1.9 },
+  null,
+  { fx: 1420, fy: 220, s: 1.7 },
+  null,
+];
+
+const icons: Record<CityStep["id"], React.ReactNode> = {
+  source: <path d="M12 3s-6 7-6 11a6 6 0 0012 0c0-4-6-11-6-11z" />,
+  pump: (
+    <>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M5 19l3-3M16 8l3-3" />
+    </>
+  ),
+  reservoir: (
+    <>
+      <ellipse cx="12" cy="6" rx="7" ry="3" />
+      <path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3" />
+    </>
+  ),
+  pipe: <path d="M2 9h9a5 5 0 015 5v8M2 6v6M13 22h6" />,
+  treatment: (
+    <>
+      <circle cx="8" cy="12" r="5" />
+      <circle cx="17.5" cy="12" r="3.5" />
+      <path d="M8 12l3-3" />
+    </>
+  ),
+  consumers: <path d="M3 11l9-7 9 7M5 10v10h14V10M10 20v-5h4v5" />,
 };
 
-const byId = Object.fromEntries(mapNodes.map((n) => [n.id, n]));
-
-function curve(a: MapNode, b: MapNode) {
-  const mx = (a.x + b.x) / 2;
-  return `M${a.x} ${a.y} C${mx} ${a.y} ${mx} ${b.y} ${b.x} ${b.y}`;
+/** compact — mobile: нэр нь идэвхтэй pill дээр харагдаж байгаа тул гарчиггүй, текст 3 мөр. */
+function StepCard({ s, i, compact = false }: { s: CityStep; i: number; compact?: boolean }) {
+  const o = outages[0];
+  return (
+    <div
+      className={`rounded-3xl border border-abyss/10 bg-white/95 shadow-[0_18px_50px_-24px_rgba(4,33,58,.3)] backdrop-blur ${compact ? "p-4" : "p-6"}`}
+    >
+      <p className="font-display text-[11px] tracking-[0.3em] text-mist">
+        {pad(i + 1)} / {pad(N)}
+      </p>
+      {!compact && <h3 className="mt-1.5 text-xl font-extrabold">{s.label}</h3>}
+      <p className={`mt-2 text-sm leading-relaxed text-abyss/80 ${compact ? "line-clamp-3" : ""}`}>{s.text}</p>
+      <dl className={`grid gap-x-4 gap-y-2 ${compact ? "mt-3 grid-cols-2 text-xs" : "mt-4 grid-cols-1 text-sm"}`}>
+        {s.facts.map((f) => (
+          <div key={f.k} className={`flex border-t border-abyss/10 pt-2 ${compact ? "flex-col" : "justify-between gap-4"}`}>
+            <dt className="text-mist">{f.k}</dt>
+            <dd className={`font-semibold ${compact ? "" : "text-right"}`}>{f.v}</dd>
+          </div>
+        ))}
+      </dl>
+      {s.id === "consumers" && o && (
+        // намхан утсанд картыг богиносгоно — засвар газрын зураг дээр улаан тэмдгээр харагдсаар байна
+        <p
+          className={`mt-4 items-center gap-2 rounded-xl bg-alert/5 px-3 py-2 text-xs font-medium text-alert ${
+            compact ? "hidden [@media(min-height:740px)]:flex" : "flex"
+          }`}
+        >
+          <span className="h-2 w-2 animate-pulse rounded-full bg-alert" /> Одоо: {o.area} — {o.title}
+        </p>
+      )}
+    </div>
+  );
 }
 
-type Selected = { type: "node"; node: MapNode } | { type: "outage"; idx: number } | null;
-
+/**
+ * Pin хийгдсэн scene: scroll хийхэд гинжний шугамаар ус урсаж алхам бүрийг гэрэлтүүлнэ,
+ * газрын зураг дээр камер тухайн объект руу ойртож, тэр давхарга нь сэргэнэ.
+ */
 export default function CityMap() {
-  const [sel, setSel] = useState<Selected>(null);
-  const [showSewer, setShowSewer] = useState(true);
+  const root = useRef<HTMLElement>(null);
+  const [active, setActive] = useState(0);
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap
+        .timeline({
+          scrollTrigger: {
+            trigger: ".map-stage",
+            start: "top top",
+            end: () => `+=${(window.innerHeight * PIN) / 100}`,
+            pin: true,
+            scrub: 0.5,
+            invalidateOnRefresh: true,
+            onUpdate: (self) => setActive(Math.min(N - 1, Math.floor(Math.min(self.progress / 0.9, 1) * (N - 1) + 0.001))),
+          },
+        })
+        .fromTo(".spine-fill", { scaleY: 0 }, { scaleY: 1, ease: "none", duration: 0.9 }, 0)
+        .fromTo(".spine-drop", { top: "0%" }, { top: "100%", ease: "none", duration: 0.9 }, 0)
+        .to({}, { duration: 0.1 });
+
+      gsap.fromTo(
+        ".map-pill",
+        { opacity: 0, scale: 0.6 },
+        {
+          opacity: 1,
+          scale: 1,
+          duration: 0.7,
+          ease: "back.out(1.6)",
+          stagger: 0.07,
+          scrollTrigger: { trigger: ".map-stage", start: "top 70%", once: true },
+        },
+      );
+    }, root);
+    return () => ctx.revert();
+  }, []);
+
+  const f = focus[active];
+  const cam: React.CSSProperties = f
+    ? {
+        transformOrigin: `${f.fx / 16}% ${f.fy / 9}%`,
+        transform: `translate(calc(50% - ${f.fx / 16}% + var(--vx) * 100vw), calc(50% - ${f.fy / 9}% + var(--vy) * 100svh)) scale(${f.s})`,
+      }
+    : { transformOrigin: "50% 50%", transform: "translate(0px, 0px) scale(1)" };
+  const t = (active / (N - 1)) * 100;
 
   return (
-    <section id="map" className="relative bg-deep/40 py-24 sm:py-32">
-      <div className="mx-auto max-w-7xl px-4 sm:px-8">
-        <SectionHeading
-          index="05"
-          eyebrow="Darkhan City Map"
-          title={
-            <>
-              УС <span className="text-water">ДАРХАН ХОТООР</span>
-            </>
-          }
-          lead="Цэг дээр дарж дэлгэрэнгүй мэдээлэл аваарай. Улаан цэг — одоо явагдаж буй засварын ажил."
+    <section id="map" ref={root} className="relative bg-foam">
+      {/* Гинжний алхам бүрийн scroll байрлал — pill дарахад энд гулсана */}
+      {cityFlow.map((s, i) => (
+        <span
+          key={s.id}
+          id={`map-step-${i}`}
+          aria-hidden
+          className="pointer-events-none absolute left-0"
+          style={{ top: `calc(${i * STEP}vh + 40px)` }}
         />
+      ))}
 
-        <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs text-mist">
-          {Object.entries(kindStyle).map(([k, v]) => (
-            <span key={k} className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ background: v.color }} /> {v.label}
-            </span>
-          ))}
+      <div className="map-stage relative h-[100svh] min-h-[600px] overflow-hidden">
+        {/* газрын зураг: cover + камер */}
+        <div className="pointer-events-none absolute left-1/2 top-1/2 aspect-[16/9] w-[max(100%,calc(100svh*16/9))] -translate-x-1/2 -translate-y-1/2">
+          <div
+            className="absolute inset-0 transition-[transform,transform-origin] duration-[1600ms] ease-[cubic-bezier(.22,1,.36,1)] [--vx:0.2] [--vy:-0.08] lg:[--vx:-0.26] lg:[--vy:0.06]"
+            style={cam}
+          >
+            <DarkhanMap active={active} className="h-full w-full" />
+          </div>
+        </div>
+
+        {/* уншигдахуйц байлгах бүрхүүл */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-60 bg-gradient-to-b from-foam via-foam/75 to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-3/4 bg-gradient-to-r from-foam/90 via-foam/60 to-transparent lg:hidden" />
+        <div className="pointer-events-none absolute inset-y-0 left-1/2 hidden w-[36rem] -translate-x-1/2 bg-[radial-gradient(closest-side,rgba(245,251,255,.9),rgba(245,251,255,0))] lg:block" />
+
+        <div className="absolute inset-x-0 top-24 z-10 px-4 text-center sm:top-28">
+          <p className="eyebrow">
+            <span className="text-mist">05</span> — Darkhan City Map
+          </p>
+          <h2 className="mt-3 font-display text-2xl font-semibold sm:text-5xl">
+            ДАРХАН ХОТЫН <span className="text-water">МАП</span>
+          </h2>
+        </div>
+
+        {/* гинж */}
+        <div className="absolute bottom-72 left-4 top-40 z-10 sm:top-52 lg:bottom-16 lg:left-1/2 lg:top-56 lg:w-60 lg:-translate-x-1/2">
+          <div className="relative h-full">
+            <div className="absolute inset-y-[18px] left-[16px] w-1 lg:inset-y-[22px] rounded-full bg-abyss/10 lg:left-1/2 lg:-ml-0.5">
+              <div className="spine-fill absolute inset-0 origin-top rounded-full bg-gradient-to-b from-aqua to-water" />
+              <div className="spine-drop absolute left-1/2 -translate-x-1/2 -translate-y-1/2">
+                <svg width="14" height="18" viewBox="0 0 14 18" className="drop-shadow-[0_2px_6px_rgba(0,120,190,.5)]" aria-hidden>
+                  <path d="M7 0C7 0 0 8 0 11.5C0 15.1 3.1 18 7 18S14 15.1 14 11.5C14 8 7 0 7 0Z" fill="#0078be" />
+                </svg>
+              </div>
+            </div>
+
+            <ol className="relative flex h-full flex-col justify-between">
+              {cityFlow.map((s, i) => {
+                const state = i === active ? "active" : i < active ? "done" : "todo";
+                return (
+                  <li key={s.id} className="map-pill">
+                    <a
+                      href={`#map-step-${i}`}
+                      aria-current={i === active ? "step" : undefined}
+                      className={`flex items-center gap-3 rounded-full border py-1 pl-1 pr-3 text-[13px] font-semibold lg:py-1.5 lg:pl-1.5 lg:pr-4 lg:text-sm shadow-sm transition-colors duration-500 lg:w-60 ${
+                        state === "active"
+                          ? "border-water bg-water text-white shadow-[0_10px_30px_-10px_rgba(0,120,190,.7)]"
+                          : state === "done"
+                            ? "border-water/40 bg-white text-abyss"
+                            : "border-abyss/10 bg-white/80 text-abyss/55 backdrop-blur"
+                      }`}
+                    >
+                      <span
+                        className={`grid h-7 w-7 shrink-0 place-items-center rounded-full lg:h-8 lg:w-8 transition-colors duration-500 ${
+                          state === "active" ? "bg-white text-water" : state === "done" ? "bg-water text-white" : "bg-abyss/5 text-abyss/50"
+                        }`}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          {icons[s.id]}
+                        </svg>
+                      </span>
+                      {s.label}
+                    </a>
+                  </li>
+                );
+              })}
+            </ol>
+
+            {/* desktop: карт идэвхтэй алхмын хажууд явна */}
+            <div
+              className="absolute left-full ml-10 hidden w-[19rem] transition-[top,transform] duration-700 ease-[cubic-bezier(.22,1,.36,1)] lg:block xl:ml-12 xl:w-[22rem]"
+              style={{ top: `${t}%`, transform: `translateY(-${t}%)` }}
+            >
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={active}
+                  initial={{ opacity: 0, x: 24 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -12 }}
+                  transition={{ duration: 0.35 }}
+                >
+                  <StepCard s={cityFlow[active]} i={active} />
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
+
+        {/* mobile: доод карт */}
+        <div className="absolute inset-x-4 bottom-4 z-20 lg:hidden">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={active}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
+            >
+              <StepCard s={cityFlow[active]} i={active} compact />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* тайлбар */}
+        <div className="absolute bottom-6 left-8 z-10 hidden flex-col gap-2 rounded-2xl bg-white/80 px-4 py-3 text-xs text-abyss/80 shadow-sm backdrop-blur lg:flex">
+          <span className="flex items-center gap-2">
+            <span className="h-1 w-6 rounded-full bg-[#0a8fd6]" /> Цэвэр усны шугам
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="h-1 w-6 rounded-full bg-[#1fa37a]" /> Бохир усны шугам
+          </span>
           <span className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full bg-alert" /> Засвар
           </span>
-          <label className="ml-auto flex cursor-pointer items-center gap-2">
-            <input
-              type="checkbox"
-              checked={showSewer}
-              onChange={(e) => setShowSewer(e.target.checked)}
-              className="accent-leaf"
-            />
-            Бохир усны шугам
-          </label>
         </div>
-
-        <div className="glass relative mt-6 overflow-hidden rounded-3xl">
-          <div className="overflow-x-auto" data-lenis-prevent-horizontal>
-          <svg viewBox="0 0 1000 600" className="block h-auto w-full min-w-[720px]" role="img" aria-label="Дархан хотын усны сүлжээний схем">
-            <defs>
-              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M40 0H0V40" fill="none" stroke="#3fd0ff" strokeOpacity=".05" />
-              </pattern>
-              <filter id="glow">
-                <feGaussianBlur stdDeviation="4" result="b" />
-                <feMerge>
-                  <feMergeNode in="b" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-            <rect width="1000" height="600" fill="url(#grid)" />
-            {/* Хараа гол */}
-            <path
-              d="M0 90 C120 60 200 140 320 110 S520 60 640 90 S880 160 1000 120"
-              fill="none"
-              stroke="#1ea4e6"
-              strokeOpacity=".25"
-              strokeWidth="18"
-              strokeLinecap="round"
-            />
-            <text x="880" y="105" fill="#8fb3c9" fontSize="12" letterSpacing="3">
-              ХАРАА ГОЛ
-            </text>
-            {/* районы хүрээ */}
-            {mapNodes
-              .filter((n) => n.kind === "district")
-              .map((n) => (
-                <ellipse key={n.id} cx={n.x} cy={n.y} rx="110" ry="70" fill="#e8f7ff" fillOpacity=".03" stroke="#e8f7ff" strokeOpacity=".08" />
-              ))}
-
-            {showSewer &&
-              mapSewers.map(([a, b]) => (
-                <path key={a + b} d={curve(byId[a], byId[b])} stroke="#4ee6a6" strokeOpacity=".7" strokeWidth="2" fill="none" className="flow-slow" />
-              ))}
-            {mapPipes.map(([a, b]) => (
-              <g key={a + b}>
-                <path d={curve(byId[a], byId[b])} stroke="#3fd0ff" strokeOpacity=".2" strokeWidth="6" fill="none" />
-                <path d={curve(byId[a], byId[b])} stroke="#7fe7ff" strokeWidth="2.5" fill="none" className="flow" filter="url(#glow)" />
-              </g>
-            ))}
-
-            {mapNodes.map((n) => {
-              const c = kindStyle[n.kind].color;
-              const active = sel?.type === "node" && sel.node.id === n.id;
-              return (
-                <g
-                  key={n.id}
-                  onClick={() => setSel({ type: "node", node: n })}
-                  className="cursor-pointer"
-                  role="button"
-                  tabIndex={0}
-                  aria-label={n.name}
-                  onKeyDown={(e) => e.key === "Enter" && setSel({ type: "node", node: n })}
-                >
-                  <circle cx={n.x} cy={n.y} r="22" fill="transparent" />
-                  <circle cx={n.x} cy={n.y} r={n.kind === "district" ? 8 : 10} fill={c} className="pulse-ring" opacity=".5" />
-                  <circle
-                    cx={n.x}
-                    cy={n.y}
-                    r={n.kind === "district" ? 7 : 9}
-                    fill={active ? "#020b14" : c}
-                    stroke={c}
-                    strokeWidth="3"
-                  />
-                  <text
-                    x={n.x}
-                    y={n.y - 20}
-                    fill="#e8f7ff"
-                    fontSize="13"
-                    textAnchor="middle"
-                    stroke="#04182a"
-                    strokeWidth="5"
-                    strokeLinejoin="round"
-                    paintOrder="stroke"
-                  >
-                    {n.name}
-                  </text>
-                </g>
-              );
-            })}
-
-            {outages.map((o, i) => (
-              <g key={o.id} onClick={() => setSel({ type: "outage", idx: i })} className="cursor-pointer" role="button" aria-label={`Засвар: ${o.area}`}>
-                <circle cx={o.mapPoint.x} cy={o.mapPoint.y} r="12" fill="#ff4d5e" className="pulse-ring" />
-                <circle cx={o.mapPoint.x} cy={o.mapPoint.y} r="8" fill="#ff4d5e" />
-                <text x={o.mapPoint.x + 16} y={o.mapPoint.y + 4} fill="#ff4d5e" fontSize="12" fontWeight="700">
-                  ЗАСВАР
-                </text>
-              </g>
-            ))}
-          </svg>
-          </div>
-
-          <AnimatePresence>
-            {sel && (
-              <motion.div
-                key={sel.type === "node" ? sel.node.id : `o${sel.idx}`}
-                initial={{ opacity: 0, x: 30 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 30 }}
-                transition={{ duration: 0.35 }}
-                className="relative m-3 rounded-2xl border border-white/10 bg-abyss/90 p-6 backdrop-blur-xl md:absolute md:right-4 md:top-4 md:m-0 md:w-80"
-              >
-                <button onClick={() => setSel(null)} className="absolute right-4 top-3 text-xl text-mist hover:text-foam" aria-label="Хаах">
-                  ×
-                </button>
-                {sel.type === "node" ? (
-                  <>
-                    <p className="eyebrow" style={{ color: kindStyle[sel.node.kind].color }}>
-                      {kindStyle[sel.node.kind].label}
-                    </p>
-                    <h3 className="mt-2 font-display text-xl">{sel.node.name}</h3>
-                    <dl className="mt-5 space-y-3">
-                      {sel.node.info.map((i) => (
-                        <div key={i.k} className="flex justify-between gap-4 border-b border-white/5 pb-2 text-sm">
-                          <dt className="text-mist">{i.k}</dt>
-                          <dd className="text-right">{i.v}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </>
-                ) : (
-                  <>
-                    <p className="eyebrow text-alert!">🔴 Засвар</p>
-                    <h3 className="mt-2 font-display text-xl">{outages[sel.idx].area}</h3>
-                    <p className="mt-3 text-sm">{outages[sel.idx].title}</p>
-                    <dl className="mt-5 space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <dt className="text-mist">Шалтгаан</dt>
-                        <dd>{outages[sel.idx].reason}</dd>
-                      </div>
-                      <div className="flex justify-between">
-                        <dt className="text-mist">Хугацаа</dt>
-                        <dd>{outages[sel.idx].time}</dd>
-                      </div>
-                    </dl>
-                  </>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-        <p className="mt-3 text-[11px] text-mist/70">
-          <span className="md:hidden">← Хажуу тийш гүйлгэж харна уу. </span>* Схем нь бодит газарзүйн байршлыг харуулахгүй, ерөнхий бүтцийг илэрхийлнэ.</p>
+        <p className="absolute bottom-6 right-8 z-10 hidden max-w-xs text-right text-[11px] text-mist/80 lg:block">
+          * Схем нь бодит газарзүйн байршлыг харуулахгүй, ерөнхий бүтцийг илэрхийлнэ.
+        </p>
       </div>
     </section>
   );

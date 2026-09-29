@@ -38,7 +38,7 @@ export default function WaterQuality() {
 
   return (
     <section id="quality" className="relative overflow-hidden py-24 sm:py-32">
-      <div className="pointer-events-none absolute -right-40 top-20 h-[520px] w-[520px] rounded-full bg-water/10 blur-[120px]" />
+      <div className="pointer-events-none absolute -right-40 top-20 h-[520px] w-[520px] rounded-full bg-aqua/20 blur-[120px]" />
       <div className="mx-auto max-w-7xl px-4 sm:px-8">
         <SectionHeading
           index="04"
@@ -51,9 +51,9 @@ export default function WaterQuality() {
           lead="Цэвэр ус бол бидний хамгийн чухал хариуцлага."
         />
 
-        <div className="mt-16 grid grid-cols-2 gap-px overflow-hidden rounded-3xl bg-white/5 lg:grid-cols-4">
+        <div className="mt-16 grid grid-cols-2 gap-px overflow-hidden rounded-3xl border border-abyss/10 bg-abyss/10 lg:grid-cols-4">
           {qualityStats.map((s) => (
-            <div key={s.label} className="bg-abyss p-6 sm:p-10">
+            <div key={s.label} className="bg-white p-6 sm:p-10">
               <div className="font-display text-4xl font-bold sm:text-6xl">
                 <Counter to={s.value} suffix={s.suffix} />
               </div>
@@ -73,11 +73,11 @@ export default function WaterQuality() {
                 className={`flex items-center justify-between rounded-2xl border px-6 py-5 text-left transition ${
                   sel === p.id
                     ? "border-water/60 bg-water/10"
-                    : "border-white/10 hover:border-white/25 hover:bg-white/[0.03]"
+                    : "border-abyss/10 bg-white/60 hover:border-abyss/25 hover:bg-white"
                 }`}
               >
                 <span className="font-display text-sm tracking-wider">{p.name}</span>
-                <span className={`font-display text-lg ${sel === p.id ? "text-water" : "text-foam/70"}`}>
+                <span className={`font-display text-lg ${sel === p.id ? "text-water" : "text-abyss/70"}`}>
                   {p.value}
                 </span>
               </button>
@@ -98,7 +98,7 @@ export default function WaterQuality() {
                 <p className="mt-2 text-sm text-mist">Стандарт: {current.norm}</p>
 
                 <div className="mt-8">
-                  <div className="relative h-2 rounded-full bg-white/10">
+                  <div className="relative h-2 rounded-full bg-abyss/10">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${Math.max(current.ratio * 100, 3)}%` }}
@@ -112,7 +112,7 @@ export default function WaterQuality() {
                   </div>
                 </div>
 
-                <p className="mt-8 leading-relaxed text-foam/85">{current.text}</p>
+                <p className="mt-8 leading-relaxed text-abyss/85">{current.text}</p>
                 <p className="mt-8 inline-flex items-center gap-2 rounded-full bg-leaf/10 px-4 py-2 text-xs text-leaf">
                   <span className="h-2 w-2 rounded-full bg-leaf" /> Стандартын шаардлага хангасан
                 </p>

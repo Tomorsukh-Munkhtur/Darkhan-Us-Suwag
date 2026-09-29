@@ -63,22 +63,25 @@ const fragment = /* glsl */ `
     float n = fbm(p * 2.2 + vec2(t * 0.4, -t * 0.25));
     float c = caustic(p * 3.2 + n * 0.8, uTime);
 
-    vec3 deep = vec3(0.008, 0.043, 0.078);
-    vec3 mid = vec3(0.02, 0.16, 0.27);
-    vec3 light = vec3(0.35, 0.85, 1.0);
+    // тунгалаг гүехэн ус: доод хэсэг цэнхэр, дээд хэсэг гэгээлэг
+    vec3 deep = vec3(0.29, 0.67, 0.89);
+    vec3 shallow = vec3(0.80, 0.93, 0.99);
+    vec3 foam = vec3(0.961, 0.984, 1.0);
+    vec3 sun = vec3(1.0);
 
     float depth = smoothstep(-0.7, 0.7, p.y + n * 0.4);
-    vec3 col = mix(deep, mid, depth * 0.9);
-    col += light * c * (0.35 + 0.4 * depth);
+    vec3 col = mix(deep, shallow, depth);
+    // нарны caustic гэрэл
+    col = mix(col, sun, c * (0.75 - 0.35 * depth));
 
     // гэрэл усан дээр тусах (mouse spotlight)
     float spot = exp(-d * 2.4);
-    col += light * spot * 0.22 * (0.6 + 0.4 * n);
+    col = mix(col, sun, spot * 0.3 * (0.6 + 0.4 * n));
 
-    // vignette + scroll үед харанхуй болох
+    // vignette + scroll үед хуудасны дэвсгэр рүү уусах
     float vig = smoothstep(1.25, 0.2, length((uv - 0.5) * vec2(aspect, 1.0)));
-    col *= mix(0.35, 1.0, vig);
-    col = mix(col, deep, uScroll * 0.7);
+    col = mix(foam, col, mix(0.55, 1.0, vig));
+    col = mix(col, foam, uScroll * 0.7);
 
     gl_FragColor = vec4(col, 1.0);
   }

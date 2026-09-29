@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npm run lint)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Read(//c/Program Files/Google/Chrome/Application/**)",
+      "Read(//c/Users/thunderobot/AppData/Local/**)",
+      "Bash(npm init *)",
+      "Bash(npm install *)"
+    ]
+  }
+}

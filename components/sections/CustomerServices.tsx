@@ -32,7 +32,7 @@ export default function CustomerServices() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.06 }}
-              className="group rounded-2xl border border-white/10 p-5 transition hover:border-water/50 hover:bg-water/5"
+              className="group rounded-2xl border border-abyss/10 bg-white/70 p-5 transition hover:border-water/50 hover:bg-white"
             >
               <span className="font-display text-xs text-mist">0{i + 1}</span>
               <h3 className="mt-6 font-display text-base group-hover:text-water">{s.title}</h3>
@@ -55,7 +55,7 @@ export default function CustomerServices() {
                     setSent(false);
                   }}
                   className={`rounded-xl border px-4 py-3 text-left text-sm transition ${
-                    type === r ? "border-water bg-water/10 text-water" : "border-white/10 hover:border-white/30"
+                    type === r ? "border-water bg-water/10 text-water" : "border-abyss/10 bg-white/60 hover:border-abyss/30"
                   }`}
                 >
                   {r}
@@ -94,7 +94,7 @@ export default function CustomerServices() {
                 className="grid gap-4 sm:grid-cols-2"
               >
                 <p className="text-sm text-mist sm:col-span-2">
-                  Сонгосон: <span className="text-foam">{type}</span>
+                  Сонгосон: <span className="text-abyss">{type}</span>
                 </p>
                 {[
                   { n: "name", l: "Овог нэр", t: "text" },
@@ -110,7 +110,7 @@ export default function CustomerServices() {
                       name={f.n}
                       type={f.t}
                       required={!f.optional}
-                      className="mt-1.5 w-full rounded-xl border border-white/10 bg-abyss/60 px-4 py-3 text-sm outline-none transition focus:border-water"
+                      className="mt-1.5 w-full rounded-xl border border-abyss/15 bg-white px-4 py-3 text-sm outline-none transition focus:border-water"
                     />
                   </label>
                 ))}
@@ -120,12 +120,12 @@ export default function CustomerServices() {
                     name="message"
                     rows={4}
                     required
-                    className="mt-1.5 w-full resize-none rounded-xl border border-white/10 bg-abyss/60 px-4 py-3 text-sm outline-none transition focus:border-water"
+                    className="mt-1.5 w-full resize-none rounded-xl border border-abyss/15 bg-white px-4 py-3 text-sm outline-none transition focus:border-water"
                   />
                 </label>
                 <button
                   type="submit"
-                  className="rounded-full bg-water px-7 py-3.5 font-display text-sm font-semibold text-abyss transition hover:bg-aqua sm:col-span-2 sm:justify-self-start"
+                  className="rounded-full bg-water px-7 py-3.5 font-display text-sm font-semibold text-white transition hover:bg-deep sm:col-span-2 sm:justify-self-start"
                 >
                   Илгээх
                 </button>
