@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { journey } from "@/lib/content";
 import SectionHeading from "../ui/SectionHeading";
+import DripDots from "./journey/DripDots";
 import {
+  ScrubDriver,
   SourceVisual,
   ExtractionVisual,
   TreatmentVisual,
@@ -26,70 +28,141 @@ const visuals: Record<string, React.FC> = {
 };
 
 const pad = (n: number) => String(n).padStart(2, "0");
+const N = journey.length;
+/** Нэг шатанд ногдох scroll (svh) */
+const STAGE_SVH = 80;
 
+/**
+ * Усны аялал — нэг бүхэл хэсэг: самбар дэлгэц дээр тогтож (sticky), scroll хийх тусам 6 шат
+ * нэг картан дотор солигдоно. Шат солигдоход ус картыг доороос угааж өнгөрнө, баруун талд дусал дусна.
+ */
 export default function WaterJourney() {
   const root = useRef<HTMLElement>(null);
+  const track = useRef<HTMLDivElement>(null);
+  const wave = useRef<HTMLDivElement>(null);
+  // active: scroll-оор тодорхойлогдох шат (цэгүүд); shown: картан дээр харагдаж буй шат (усан шилжилтийн дараа)
   const [active, setActive] = useState(0);
-  const [inView, setInView] = useState(false);
+  const [shown, setShown] = useState(0);
+  const progress = useRef(0);
+  const activeRef = useRef(0);
+  const shownRef = useRef(0);
+  const busy = useRef(false);
+  const visualTl = useRef<gsap.core.Timeline | null>(null);
+
+  // Харагдаж буй шатны зураг: тухайн шатны эхний 75%-д анимац нь дуусна
+  const visualTarget = () => gsap.utils.clamp(0, 1, (progress.current * N - shownRef.current) / 0.75);
+  const drive = useCallback((tl: gsap.core.Timeline) => {
+    visualTl.current = tl;
+    gsap.to(tl, { progress: visualTarget(), duration: 1.2, ease: "power2.out", overwrite: true });
+    return () => {
+      gsap.killTweensOf(tl);
+      if (visualTl.current === tl) visualTl.current = null;
+    };
+  }, []);
 
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      // Баруун талын цэгүүд: харагдах эсэх + идэвхтэй шат
-      ScrollTrigger.create({
-        trigger: ".journey-stages",
-        start: "top center",
-        end: "bottom center",
-        onToggle: (self) => setInView(self.isActive),
-      });
-      gsap.utils.toArray<HTMLElement>(".journey-stage").forEach((el, i) => {
-        ScrollTrigger.create({
-          trigger: el,
-          start: "top center",
-          end: "bottom center",
-          onToggle: (self) => self.isActive && setActive(i),
-        });
-      });
-    }, root);
+    const st = ScrollTrigger.create({
+      trigger: track.current,
+      start: "top top",
+      end: "bottom bottom",
+      onUpdate: (self) => {
+        progress.current = self.progress;
+        const i = Math.min(N - 1, Math.floor(self.progress * N + 1e-6));
+        if (i !== activeRef.current) {
+          activeRef.current = i;
+          setActive(i);
+        }
+        if (visualTl.current) gsap.to(visualTl.current, { progress: visualTarget(), duration: 0.6, ease: "power1.out", overwrite: true });
+      },
+    });
 
     const mm = gsap.matchMedia();
     mm.add(
       "(prefers-reduced-motion: no-preference)",
       () => {
-        gsap.utils.toArray<HTMLElement>(".journey-stage").forEach((el) => {
-          const q = gsap.utils.selector(el);
-
-          // Шатны нэр үсэг үсгээр гарч, дараа нь картын агуулга дараалан гарна
-          gsap
-            .timeline({ scrollTrigger: { trigger: el, start: "top 70%", toggleActions: "play none none reverse" } })
-            .from(q(".stage-char"), { yPercent: 110, duration: 0.9, ease: "expo.out", stagger: 0.035 })
-            .from(q(".stage-count"), { opacity: 0, y: 10, duration: 0.6 }, 0)
-            .from(q(".stage-reveal"), { opacity: 0, y: 24, duration: 0.8, ease: "power3.out", stagger: 0.07 }, 0.25)
-            .from(q(".stage-next"), { opacity: 0, y: -12, duration: 0.6 }, 0.6);
-
-          // Карт доороос 3D-ээр өргөгдөж голд тодорно, гарахдаа бага зэрэг холдоно
-          gsap
-            .timeline({ scrollTrigger: { trigger: el, start: "top bottom", end: "bottom top", scrub: 0.6 } })
-            .fromTo(
-              q(".stage-card"),
-              { y: 120, scale: 0.9, rotationX: 14, opacity: 0.25, transformPerspective: 1200 },
-              { y: 0, scale: 1, rotationX: 0, opacity: 1, ease: "power2.out", duration: 1 },
-            )
-            .to({}, { duration: 0.5 })
-            .to(q(".stage-card"), { y: -40, scale: 0.96, opacity: 0.55, ease: "power1.in", duration: 1 });
+        // Hero-ийн ард доороос гарч ирэх үед (Hero шумбаж байхад) гарчиг усаар дамжин
+        // долгиолж бүдэг харагдаад, Hero бүдгэрэхийн хэрээр тодорно.
+        const head = root.current!.querySelector<HTMLElement>(".journey-head")!;
+        const turb = root.current!.querySelector("#journey-water feTurbulence")!;
+        const disp = root.current!.querySelector("#journey-water feDisplacementMap")!;
+        ScrollTrigger.create({
+          trigger: root.current,
+          start: "top bottom",
+          end: "top top",
+          onUpdate: (self) => {
+            const e = gsap.utils.clamp(0, 1, (1 - self.progress) / 0.5) ** 2;
+            disp.setAttribute("scale", (70 * e).toFixed(1));
+            turb.setAttribute("baseFrequency", `0.008 ${(0.02 + 0.02 * e).toFixed(4)}`);
+            head.style.filter = e > 0.001 ? `url(#journey-water) blur(${(6 * e).toFixed(2)}px)` : "";
+            head.style.opacity = String(1 - 0.4 * e);
+          },
         });
       },
       root,
     );
 
     return () => {
+      st.kill();
       mm.revert();
-      ctx.revert();
     };
   }, []);
 
+  // Шат солигдоход: ус картыг бүрхэх агшинд агуулга солигдоно. Хурдан гүйлгэвэл сүүлийн шат руу шууд очно.
+  useEffect(() => {
+    const run = () => {
+      const target = activeRef.current;
+      if (target === shownRef.current) return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        shownRef.current = target;
+        setShown(target);
+        return;
+      }
+      busy.current = true;
+      const down = target > shownRef.current;
+      gsap
+        .timeline({
+          onComplete: () => {
+            busy.current = false;
+            run();
+          },
+        })
+        // y: 0 — CSS-ийн translateY(105%)-ийг GSAP px болгож хадгалдаг тул цэвэрлэнэ (зөвхөн yPercent-ээр хөдөлнө)
+        .set(wave.current, { y: 0, yPercent: down ? 105 : -105, scaleY: down ? 1 : -1 })
+        .to(wave.current, { yPercent: 0, duration: 0.45, ease: "power2.in" })
+        .add(() => {
+          shownRef.current = activeRef.current;
+          setShown(activeRef.current);
+        })
+        .to(wave.current, { yPercent: down ? -105 : 105, duration: 0.6, ease: "power2.out" }, "+=0.06");
+    };
+    if (!busy.current) run();
+  }, [active]);
+
+  // Шинэ шатны нэр үсэг үсгээр, агуулга дараалан гарна
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const ctx = gsap.context(() => {
+      gsap
+        .timeline()
+        .fromTo(".stage-char", { yPercent: 110 }, { yPercent: 0, duration: 0.8, ease: "expo.out", stagger: 0.03 })
+        .fromTo(".stage-reveal", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out", stagger: 0.06 }, 0.1);
+    }, root);
+    return () => ctx.revert();
+  }, [shown]);
+
+  const s = journey[shown];
+  const Visual = visuals[s.id];
+
   return (
-    <section id="journey" ref={root} className="relative bg-foam pt-24 sm:pt-32">
-      <div className="mx-auto max-w-7xl px-4 sm:px-8">
+    // motion-safe:-mt-[100svh]: Hero-ийн шумбах замын ард байрлана (Hero.tsx)
+    <section id="journey" ref={root} className="relative bg-foam pt-24 motion-safe:-mt-[100svh] sm:pt-32">
+      <svg aria-hidden className="absolute h-0 w-0">
+        <filter id="journey-water">
+          <feTurbulence type="fractalNoise" baseFrequency="0.008 0.04" numOctaves={2} seed={3} />
+          <feDisplacementMap in="SourceGraphic" scale={0} xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </svg>
+      <div className="journey-head mx-auto max-w-7xl px-4 sm:px-8">
         <SectionHeading
           index="02"
           eyebrow="Water Journey"
@@ -103,106 +176,66 @@ export default function WaterJourney() {
         />
       </div>
 
-      {/* Баруун талын шатны цэгүүд */}
-      <nav
-        aria-label="Усны аяллын шатууд"
-        className={`fixed right-4 top-1/2 z-30 hidden -translate-y-1/2 flex-col items-end gap-3.5 transition-opacity duration-500 md:flex lg:right-8 ${
-          inView ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
-      >
-        {journey.map((s, i) => (
-          <a
-            key={s.id}
-            href={`#stage-${s.id}`}
-            aria-label={s.label}
-            aria-current={i === active ? "step" : undefined}
-            className="group relative flex h-4 w-4 items-center justify-center"
-          >
-            <span className="pointer-events-none absolute right-7 whitespace-nowrap rounded-full bg-white px-3 py-1 font-display text-[10px] tracking-[0.2em] text-abyss opacity-0 shadow-md shadow-abyss/10 transition group-hover:opacity-100">
-              {s.label}
-            </span>
-            <span
-              className={`block rounded-full transition-all duration-500 ${
-                i === active
-                  ? "h-4 w-4 bg-water shadow-[0_0_0_5px_rgba(0,120,190,.15)]"
-                  : "h-3 w-3 bg-abyss/15 group-hover:bg-abyss/35"
-              }`}
-            />
-          </a>
+      {/* Шат бүрт STAGE_SVH scroll; самбар нь энэ замын турш тогтоно */}
+      <div ref={track} className="relative" style={{ height: `calc(${N} * ${STAGE_SVH}svh + 100svh)` }}>
+        {journey.map((st, i) => (
+          <span key={st.id} id={`stage-${st.id}`} aria-hidden className="absolute left-0 w-px" style={{ top: `calc(${i + 0.3} * ${STAGE_SVH}svh)` }} />
         ))}
-      </nav>
 
-      <div className="journey-stages">
-        {journey.map((s, i) => {
-          const Visual = visuals[s.id];
-          const next = journey[i + 1];
-          return (
-            <article
-              key={s.id}
-              id={`stage-${s.id}`}
-              className="journey-stage flex min-h-[100svh] flex-col items-center justify-center px-4 py-24 sm:px-8"
-            >
-              <header className="mb-6 text-center sm:mb-8">
-                <p className="stage-count font-display text-[11px] tracking-[0.3em] text-mist">
-                  {pad(i + 1)} / {pad(journey.length)}
-                </p>
-                <h3 aria-label={s.label} className="mt-2 font-display text-2xl font-semibold tracking-[0.12em] sm:text-4xl">
-                  <span aria-hidden className="inline-block overflow-hidden pb-1 align-bottom">
-                    {Array.from(s.label).map((c, ci) => (
-                      <span key={ci} className="stage-char inline-block whitespace-pre">
-                        {c}
-                      </span>
-                    ))}
+        <div className="sticky top-0 flex h-[100svh] flex-col items-center justify-center px-4 pt-16 sm:px-8 sm:pt-20">
+          <header className="mb-3 text-center sm:mb-6">
+            <p className="stage-count font-display text-[11px] tracking-[0.3em] text-mist">
+              {pad(shown + 1)} / {pad(N)}
+            </p>
+            <h3 aria-label={s.label} aria-live="polite" className="mt-2 text-h3 tracking-[0.08em]">
+              <span aria-hidden className="inline-block overflow-hidden pb-1 align-bottom">
+                {Array.from(s.label).map((c, ci) => (
+                  <span key={`${shown}-${ci}`} className="stage-char inline-block whitespace-pre">
+                    {c}
                   </span>
-                </h3>
-              </header>
+                ))}
+              </span>
+            </h3>
+          </header>
 
-              <div className="stage-card glass w-full max-w-5xl overflow-hidden rounded-3xl border-water/30!">
-                <div className="grid md:grid-cols-[min(420px,48svh)_1fr]">
-                  <div className="relative aspect-square w-full overflow-hidden border-b border-abyss/10 md:border-b-0 md:border-r">
-                    <Visual />
-                  </div>
-                  <div className="flex flex-col justify-center p-6 sm:p-10">
-                    <p className="stage-reveal leading-relaxed text-abyss/80 sm:text-lg">{s.lead}</p>
-                    <dl className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-abyss/10 bg-abyss/10 sm:mt-8">
-                      {s.facts.map((f, fi) => (
-                        <div
-                          key={f.k}
-                          className={`stage-reveal bg-white p-4 ${
-                            s.facts.length % 2 && fi === s.facts.length - 1 ? "col-span-2" : ""
-                          }`}
-                        >
-                          <dt className="text-[11px] uppercase tracking-widest text-mist">{f.k}</dt>
-                          <dd className="mt-1 font-display text-sm text-abyss">{f.v}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </div>
-                </div>
-                <div className="stage-reveal border-t border-abyss/10 bg-white/60 px-6 py-5 text-center sm:py-7">
-                  <p className="font-display text-xl font-semibold sm:text-3xl">{s.title}</p>
-                </div>
+          <div className="glass relative w-full max-w-5xl overflow-hidden rounded-3xl border-water/30!">
+            <div className="grid md:grid-cols-[min(420px,46svh)_1fr]">
+              <div className="relative h-[clamp(8.5rem,23svh,15rem)] w-full overflow-hidden border-b border-abyss/10 md:aspect-square md:h-auto md:border-b-0 md:border-r">
+                <ScrubDriver.Provider value={drive}>
+                  <Visual key={s.id} />
+                </ScrubDriver.Provider>
               </div>
+              <div className="flex flex-col justify-center p-4 sm:p-10">
+                <p className="stage-reveal line-clamp-4 text-sm leading-relaxed text-abyss/80 sm:line-clamp-none sm:text-lg">{s.lead}</p>
+                <dl className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-abyss/10 bg-abyss/10 sm:mt-8">
+                  {s.facts.map((f, fi) => (
+                    <div
+                      key={`${shown}-${f.k}`}
+                      className={`stage-reveal bg-white px-3 py-2.5 sm:p-4 ${s.facts.length % 2 && fi === s.facts.length - 1 ? "col-span-2" : ""}`}
+                    >
+                      <dt className="text-[11px] uppercase tracking-widest text-mist">{f.k}</dt>
+                      <dd className="mt-1 font-display text-sm text-abyss">{f.v}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            </div>
+            <div className="stage-reveal border-t border-abyss/10 bg-white/60 px-6 py-2.5 text-center sm:py-6">
+              <p className="text-h4 font-bold">{s.title}</p>
+            </div>
 
-              <a
-                href={next ? `#stage-${next.id}` : "#services"}
-                aria-label={next ? `Дараагийн шат: ${next.label}` : "Дараагийн хэсэг"}
-                className="stage-next mt-8 grid h-14 w-14 place-items-center rounded-full text-water transition-colors hover:bg-water/10"
-              >
-                <svg width="28" height="24" viewBox="0 0 28 24" className="animate-nudge" aria-hidden>
-                  <path
-                    d="M3 3h22L14 21Z"
-                    fill="currentColor"
-                    fillOpacity=".12"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </a>
-            </article>
-          );
-        })}
+            {/* Шат солигдоход картыг угаах ус: долгиолсон орой + гүн цэнхэр бие */}
+            <div ref={wave} aria-hidden className="stage-wave">
+              <svg viewBox="0 0 1200 28" preserveAspectRatio="none" className="stage-wave__crest">
+                <path d="M0 14q50-14 100 0t100 0 100 0 100 0 100 0 100 0 100 0 100 0 100 0 100 0 100 0 100 0V28H0Z" fill="#2aa3e0" />
+                <path d="M0 14q50-14 100 0t100 0 100 0 100 0 100 0 100 0 100 0 100 0 100 0 100 0 100 0 100 0" fill="none" stroke="#bfeaff" strokeOpacity=".7" strokeWidth="2" />
+              </svg>
+              <div className="stage-wave__body" />
+            </div>
+          </div>
+
+          <DripDots items={journey} active={active} />
+        </div>
       </div>
     </section>
   );

@@ -8,8 +8,8 @@ import { gsap } from "gsap";
 type Props = {
   /** HTML гарчиг — байрлал, фонтыг нь хуулж усан доор зурна */
   title: React.RefObject<HTMLElement | null>;
-  /** Hero-ийн scroll progress (0–1) */
-  scroll: React.RefObject<number>;
+  /** Шумбалтын явц (0–1): гадаргуу руу ойртох → нэвтлэх → усан доор */
+  dive: React.RefObject<number>;
   reduced: boolean;
   running: boolean;
   onReady: () => void;
@@ -65,6 +65,7 @@ const dropFrag = /* glsl */ `
 `;
 
 // Дээрээс харсан тунгалаг ус: caustic гэрэлтэй ёроол, усан доорх гарчиг, долгион/дуслаар хугарал.
+// Шумбахад гадаргуу руу ойртож, нэвтлэх шугам доороос дээш гүйн, усан доор гүн рүү орох тусам харанхуйлна.
 const fragment = /* glsl */ `
   precision highp float;
   varying vec2 vUv;
@@ -75,8 +76,7 @@ const fragment = /* glsl */ `
   uniform vec2 uMouse;
   uniform float uTime;
   uniform float uIntro;
-  uniform float uScroll;
-  uniform float uTitleShift;
+  uniform float uDive;
 
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   float noise(vec2 p) {
@@ -100,6 +100,29 @@ const fragment = /* glsl */ `
     }
     return clamp(c * 0.35, 0.0, 1.0);
   }
+  // Дээш хөөрөх бөмбөлөг: нүд бүрт нэг, санамсаргүй хэмжээтэй, хажуу тийш найгана
+  float bubbles(vec2 uv, float aspect, float scale, float speed, float density, float seed) {
+    vec2 g = uv * vec2(aspect, 1.0) * scale - vec2(0.0, uTime * speed);
+    vec2 id = floor(g);
+    vec2 f = fract(g) - 0.5;
+    float h = hash(id + seed);
+    float on = 1.0 - smoothstep(density - 0.05, density, h);
+    vec2 c = (vec2(hash(id + seed + 1.7), hash(id + seed + 4.3)) - 0.5) * 0.4;
+    c.x += sin(uTime * 2.2 + h * 40.0) * 0.1;
+    float r = 0.1 + hash(id + seed + 9.1) * 0.16;
+    float d = length(f - c);
+    float rim = smoothstep(r - 0.06, r - 0.015, d) * (1.0 - smoothstep(r - 0.015, r, d));
+    float shine = 1.0 - smoothstep(0.0, r * 0.35, length(f - c - vec2(-0.4, 0.4) * r));
+    return (rim * 0.7 + shine) * on;
+  }
+  // Гүнд хөвөх тоосонцор (marine snow): аажмаар доош живнэ
+  float snow(vec2 uv, float aspect, float scale, float seed) {
+    vec2 g = uv * vec2(aspect, 1.0) * scale + vec2(uTime * 0.03, uTime * 0.05);
+    vec2 id = floor(g);
+    vec2 f = fract(g) - 0.5;
+    vec2 c = (vec2(hash(id + seed + 2.3), hash(id + seed + 5.9)) - 0.5) * 0.7;
+    return (1.0 - smoothstep(0.02, 0.07, length(f - c))) * step(0.6, hash(id + seed));
+  }
 
   void main() {
     vec2 uv = vUv;
@@ -112,14 +135,17 @@ const fragment = /* glsl */ `
       texture2D(uRipple, uv + vec2(0.0, uSimTexel.y)).r - texture2D(uRipple, uv - vec2(0.0, uSimTexel.y)).r
     );
 
-    // scroll хийхэд ус руу шумбах мэт ойртоно
-    vec2 p = (uv - 0.5) * vec2(aspect, 1.0) * (1.0 - uScroll * 0.35);
+    float d = uDive;
+
+    // 1) гадаргуу руу ойртоно
+    float zoom = 1.0 - 0.3 * smoothstep(0.0, 0.3, d);
+    vec2 p = (uv - 0.5) * vec2(aspect, 1.0) * zoom;
     vec2 wave = vec2(
       fbm(p * 2.6 + vec2(t * 0.11, -t * 0.07)),
       fbm(p * 2.6 + vec2(5.2 - t * 0.09, 1.7 + t * 0.12))
     ) - 0.5;
-    // эхэндээ ус долгиотой, аажмаар тогтоно
-    float rough = mix(4.0, 1.0, uIntro);
+    // эхэндээ ус долгиотой, аажмаар тогтоно; ойртох тусам долгио нэмэгдэнэ
+    float rough = mix(4.0, 1.0, uIntro) + 2.0 * smoothstep(0.0, 0.3, d);
     vec2 off = wave * 0.01 * rough + rip * 0.25;
 
     // ёроол: гүн, гүехэн өнгө
@@ -129,8 +155,8 @@ const fragment = /* glsl */ `
     vec3 col = mix(vec3(0.29, 0.67, 0.89), vec3(0.80, 0.93, 0.99), depth);
 
     // усан доорх гарчиг: хугарна, ёроолд бүдэг сүүдэр тусгана
-    vec2 tuv = uv + off + vec2(0.0, uScroll * uTitleShift);
-    float show = uIntro * (1.0 - uScroll);
+    vec2 tuv = (uv - 0.5) * zoom + 0.5 + off;
+    float show = uIntro;
     col *= 1.0 - texture2D(uTitle, tuv + vec2(-0.004, 0.012)).a * 0.18 * show;
     vec4 title = texture2D(uTitle, tuv);
     col = mix(col, title.rgb, title.a * show);
@@ -146,11 +172,51 @@ const fragment = /* glsl */ `
     col += smoothstep(0.93, 0.995, noise(p * vec2(28.0, 34.0) + wave * 6.0 + t * 0.6)) * 0.3;
     col = mix(col, vec3(1.0), exp(-length(p - uMouse * vec2(aspect, 1.0)) * 2.6) * 0.18);
 
-    // ирмэг, scroll → хуудасны дэвсгэр рүү уусна
+    // ирмэг хуудасны дэвсгэр рүү уусна
     vec3 foam = vec3(0.961, 0.984, 1.0);
     float vig = smoothstep(1.25, 0.2, length((uv - 0.5) * vec2(aspect, 1.0)));
     col = mix(foam, col, mix(0.7, 1.0, vig));
-    col = mix(col, foam, smoothstep(0.35, 1.0, uScroll));
+
+    // 2) усан доор: гүн рүү орох тусам харанхуйлна — цацраг суларч, тоосонцор хөвнө, гарчиг живнэ
+    if (d > 0.1) {
+      vec2 q = uv + vec2(sin(uv.y * 11.0 + t * 1.4), cos(uv.x * 8.0 + t * 1.1)) * 0.004 + rip * 0.2;
+      float deep = smoothstep(0.25, 0.85, d);
+      vec3 top = mix(vec3(0.20, 0.55, 0.80), vec3(0.04, 0.20, 0.36), deep);
+      vec3 bottom = mix(vec3(0.06, 0.30, 0.52), vec3(0.008, 0.05, 0.11), deep);
+      vec3 uw = mix(bottom, top, smoothstep(-0.1, 1.1, q.y));
+      // гадаргуугаас налуу тусах гэрлийн цацраг — гүнд сулрана
+      float x = q.x * aspect + (1.0 - q.y) * 0.45;
+      float ray = noise(vec2(x * 6.0, t * 0.12)) * 0.6 + noise(vec2(x * 13.0 + 3.1, t * 0.21)) * 0.4;
+      uw += vec3(0.55, 0.85, 1.0) * smoothstep(0.5, 0.95, ray) * smoothstep(-0.1, 1.0, q.y) * 0.3 * (1.0 - 0.6 * deep);
+      uw += caustic(q * vec2(aspect, 1.0) * 3.5, t * 1.3) * 0.1 * smoothstep(0.2, 1.0, q.y) * (1.0 - deep);
+      uw += vec3(0.6, 0.8, 0.95) * (snow(uv, aspect, 38.0, 3.0) + snow(uv, aspect, 70.0, 11.0) * 0.6) * 0.3 * deep;
+
+      // гарчиг жижгэрч доош живж, долгиолон бүдгэрнэ
+      float sink = smoothstep(0.1, 0.7, d);
+      vec2 tc = (q - 0.5) / mix(1.0, 0.5, sink) + 0.5 + vec2(0.0, sink * 0.25);
+      tc.x += sin(q.y * 30.0 + t * 3.0) * 0.006 * sink;
+      float bl = 0.002 + sink * 0.006;
+      vec4 tt = (texture2D(uTitle, tc + vec2(bl, 0.0)) + texture2D(uTitle, tc - vec2(bl, 0.0)) +
+                 texture2D(uTitle, tc + vec2(0.0, bl)) + texture2D(uTitle, tc - vec2(0.0, bl))) * 0.25;
+      uw = mix(uw, mix(tt.rgb, uw, 0.3 + 0.55 * sink), tt.a * (1.0 - sink) * uIntro);
+
+      // бөмбөлөг: гадаргууг нэвтлэх агшинд олон, дараа нь цөөрнө
+      float dens = 0.1 + 0.35 * exp(-pow((d - 0.34) / 0.12, 2.0));
+      float b = bubbles(uv, aspect, 5.0, 0.35, dens, 1.0) +
+                bubbles(uv, aspect, 9.0, 0.25, dens, 7.0) * 0.8 +
+                bubbles(uv, aspect, 16.0, 0.16, dens * 1.2, 13.0) * 0.6;
+      uw += vec3(0.7, 0.9, 1.0) * b * (0.5 - 0.15 * deep);
+      // гүнд захууд илүү харанхуй
+      uw *= 1.0 - 0.45 * deep * smoothstep(0.3, 1.2, length((uv - 0.5) * vec2(aspect, 1.0)));
+
+      // 3) гадаргууг нэвтлэх: долгиолсон шугам доороос дээш гүйж, доор нь усан доорх орчин
+      float line = mix(-0.15, 1.15, smoothstep(0.12, 0.34, d));
+      float y = line + (fbm(vec2(uv.x * 3.0 + t * 0.4, t * 0.3)) - 0.5) * 0.1 + sin(uv.x * 16.0 + t * 4.0) * 0.006;
+      col = mix(col, uw, smoothstep(uv.y - 0.004, uv.y + 0.004, y));
+      col += exp(-pow((uv.y - y) * 70.0, 2.0)) * 0.7;
+      col += 0.12 * exp(-pow((d - 0.3) / 0.05, 2.0));
+    }
+
     gl_FragColor = vec4(col, 1.0);
   }
 `;
@@ -196,7 +262,7 @@ function drawTitle(h1: HTMLElement, root: HTMLElement, dpr: number) {
   return tex;
 }
 
-function Water({ title, scroll, reduced, onReady }: Omit<Props, "running">) {
+function Water({ title, dive, reduced, onReady }: Omit<Props, "running">) {
   const gl = useThree((s) => s.gl);
   const size = useThree((s) => s.size);
   const invalidate = useThree((s) => s.invalidate);
@@ -210,8 +276,7 @@ function Water({ title, scroll, reduced, onReady }: Omit<Props, "running">) {
       uMouse: { value: new THREE.Vector2() },
       uTime: { value: 0 },
       uIntro: { value: reduced ? 1 : 0 },
-      uScroll: { value: 0 },
-      uTitleShift: { value: 0 },
+      uDive: { value: 0 },
     }),
     [],
   );
@@ -290,9 +355,6 @@ function Water({ title, scroll, reduced, onReady }: Omit<Props, "running">) {
       titleTex.current?.dispose();
       titleTex.current = drawTitle(h1, root, Math.min(window.devicePixelRatio, 2));
       uniforms.uTitle.value = titleTex.current;
-      // Hero.tsx-ийн scroll: гарчгийн блок өөрийн өндрийн 80%-иар доошилно
-      const block = h1.closest<HTMLElement>(".hero-p-title");
-      uniforms.uTitleShift.value = block ? (0.8 * block.offsetHeight) / root.clientHeight : 0;
       invalidate();
       if (started.current) return;
       started.current = true;
@@ -350,14 +412,21 @@ function Water({ title, scroll, reduced, onReady }: Omit<Props, "running">) {
     const t = u.uTime.value;
 
     u.uRes.value.set(size.width, size.height);
-    u.uScroll.value = scroll.current ?? 0;
+    const d = dive.current ?? 0;
+    u.uDive.value = d;
     const m = mouse.current;
     m.x += (m.tx - m.x) * 0.05;
     m.y += (m.ty - m.y) * 0.05;
     u.uMouse.value.set(m.x, m.y);
 
-    // хааяа жижиг дусал — ус амьд харагдана
-    if (!reduced && t > nextRain.current) {
+    // гадаргууг нэвтлэх шугамын дагуу дусал → шугам цацарч долгиолно
+    const line = THREE.MathUtils.lerp(-0.15, 1.15, THREE.MathUtils.smoothstep(d, 0.12, 0.34));
+    if (!reduced && line > 0 && line < 1) {
+      drops.current.push({ x: Math.random(), y: line, r: 0.015 + Math.random() * 0.01, s: 0.5 + Math.random() * 0.4 });
+    }
+
+    // хааяа жижиг дусал — ус амьд харагдана (гадаргуу харагдаж байхад)
+    if (!reduced && d < 0.3 && t > nextRain.current) {
       drops.current.push({
         x: 0.05 + Math.random() * 0.9,
         y: 0.05 + Math.random() * 0.9,
@@ -398,7 +467,7 @@ function Water({ title, scroll, reduced, onReady }: Omit<Props, "running">) {
   );
 }
 
-/** Hero: тунгалаг усан доорх "ДАРХАН ХОТ". Хулгана, дусал, scroll-оор ус хөдөлнө. */
+/** Hero: тунгалаг усан доорх "ДАРХАН ХОТ". Хулгана, дуслаар ус хөдөлнө; scroll-оор ус руу шумбана. */
 export default function HeroWater({ running, ...props }: Props) {
   return (
     <Canvas

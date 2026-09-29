@@ -54,7 +54,7 @@ export default function WaterQuality() {
         <div className="mt-16 grid grid-cols-2 gap-px overflow-hidden rounded-3xl border border-abyss/10 bg-abyss/10 lg:grid-cols-4">
           {qualityStats.map((s) => (
             <div key={s.label} className="bg-white p-6 sm:p-10">
-              <div className="font-display text-4xl font-bold sm:text-6xl">
+              <div className="text-stat">
                 <Counter to={s.value} suffix={s.suffix} />
               </div>
               <p className="mt-3 text-[11px] uppercase tracking-[0.2em] text-mist">{s.label}</p>
@@ -94,7 +94,7 @@ export default function WaterQuality() {
                 transition={{ duration: 0.4 }}
               >
                 <p className="eyebrow">{current.name}</p>
-                <p className="mt-4 font-display text-6xl font-bold text-glow sm:text-7xl">{current.value}</p>
+                <p className="mt-4 text-stat text-glow">{current.value}</p>
                 <p className="mt-2 text-sm text-mist">Стандарт: {current.norm}</p>
 
                 <div className="mt-8">

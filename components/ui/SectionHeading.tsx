@@ -26,7 +26,7 @@ export default function SectionHeading({
       <p className="eyebrow mb-5">
         <span className="text-mist">{index}</span> — {eyebrow}
       </p>
-      <h2 className="font-display text-3xl font-semibold leading-[1.1] sm:text-5xl md:text-6xl">{title}</h2>
+      <h2 className="text-h2">{title}</h2>
       {lead && <p className="mt-6 text-base text-mist sm:text-lg">{lead}</p>}
     </motion.div>
   );

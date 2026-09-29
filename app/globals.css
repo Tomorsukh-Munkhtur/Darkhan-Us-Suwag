@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Light mode: тунгалаг ус. abyss = хамгийн гүн (текст), foam = хөөс (дэвсгэр). */
+/* Үндсэн (цайвар) token-ууд: abyss = хамгийн гүн (текст), foam = хөөс (дэвсгэр). */
 @theme {
   --color-abyss: #04213a;
   --color-deep: #005b92;
@@ -11,12 +11,58 @@
   --color-mist: #56758d;
   --color-leaf: #0b8458;
   --color-alert: #d7263d;
-  --font-display: var(--font-unbounded), var(--font-manrope), system-ui, sans-serif;
-  --font-sans: var(--font-manrope), system-ui, sans-serif;
+  --font-display: var(--font-ubuntu), system-ui, sans-serif;
+  --font-sans: var(--font-ubuntu), system-ui, sans-serif;
+
+  /* Үсгийн шатлал: гарчгийн хэмжээг зөвхөн энд тохируулна (text-display, text-h2 …) */
+  --text-display: clamp(2.5rem, 1.7rem + 3.2vw, 4rem);
+  --text-display--line-height: 1.04;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 700;
+  --text-h2: clamp(2rem, 1.45rem + 2.2vw, 3.25rem);
+  --text-h2--line-height: 1.08;
+  --text-h2--letter-spacing: -0.015em;
+  --text-h2--font-weight: 700;
+  --text-h3: clamp(1.5rem, 1.22rem + 1.1vw, 2.125rem);
+  --text-h3--line-height: 1.15;
+  --text-h3--font-weight: 700;
+  --text-h4: clamp(1.125rem, 0.97rem + 0.6vw, 1.5rem);
+  --text-h4--line-height: 1.3;
+  --text-h4--font-weight: 500;
+  --text-stat: clamp(2.5rem, 1.7rem + 3.2vw, 4rem);
+  --text-stat--line-height: 1;
+  --text-stat--letter-spacing: -0.02em;
+  --text-stat--font-weight: 700;
 }
 
+/* Сайт бүхэлдээ "усны гүн" (dark): Hero-д шумбасны дараах бүх хэсэг.
+   Зөвхөн Hero-ийн гадаргуу ба түүн дээрх navbar .theme-light-аар цайвар.
+   Tailwind-ийн өнгөний utility-үүд var()-аар уншдаг тул энд солиход бүгд дагана. */
 :root {
+  color-scheme: dark;
+  --color-abyss: #e4f2fb;
+  --color-deep: #8fd6f7;
+  --color-water: #38b6f0;
+  --color-aqua: #5fd3f7;
+  --color-shallow: #072540;
+  --color-foam: #041a2e;
+  --color-mist: #8fb3c9;
+  --color-leaf: #34c28a;
+  --color-alert: #ff5a6e;
+  --color-white: #0b2e4c;
+}
+.theme-light {
   color-scheme: light;
+  --color-abyss: #04213a;
+  --color-deep: #005b92;
+  --color-water: #0078be;
+  --color-aqua: #3cc3f0;
+  --color-shallow: #e3f2fb;
+  --color-foam: #f5fbff;
+  --color-mist: #56758d;
+  --color-leaf: #0b8458;
+  --color-alert: #d7263d;
+  --color-white: #fff;
 }
 
 html {
@@ -44,23 +90,27 @@ body {
 
 ::selection {
   background: var(--color-water);
-  color: #fff;
+  color: var(--color-foam);
 }
 
 .text-glow {
-  text-shadow: 0 0 40px rgba(255, 255, 255, 0.75);
+  text-shadow: 0 0 40px rgba(56, 182, 240, 0.45);
 }
 
+/* Усан доорх бараан шил */
 .glass {
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(232, 245, 253, 0.75));
-  border: 1px solid rgba(0, 120, 190, 0.12);
-  box-shadow: 0 18px 50px -24px rgba(4, 33, 58, 0.18);
+  background: linear-gradient(160deg, rgba(14, 52, 86, 0.85), rgba(7, 37, 64, 0.72));
+  border: 1px solid rgba(56, 182, 240, 0.16);
+  box-shadow:
+    0 18px 50px -24px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
 
 .eyebrow {
   font-family: var(--font-display);
+  font-weight: 500;
   font-size: 0.72rem;
   letter-spacing: 0.32em;
   text-transform: uppercase;
@@ -130,6 +180,105 @@ body {
   }
 }
 
+/* ---- Усны аялал (WaterJourney.tsx) ---- */
+/* шат солигдоход картыг доороос угааж өнгөрөх ус */
+.stage-wave {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  transform: translateY(105%);
+}
+.stage-wave__body {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(60% 40% at 30% 20%, rgb(191 234 255 / 0.25), transparent 70%),
+    linear-gradient(180deg, #2aa3e0, #0b3a63 65%, #062a4a);
+}
+.stage-wave__crest {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% - 1px);
+  width: 200%;
+  height: 26px;
+  animation: crest-slide 2.2s linear infinite;
+}
+@keyframes crest-slide {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* хуудаслалт: дусал дусна (DripDots.tsx) */
+.drip-dot__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in oklab, var(--color-water) 45%, transparent);
+  transition:
+    border-color 0.3s,
+    transform 0.3s;
+}
+.drip-dot:hover .drip-dot__ring {
+  border-color: var(--color-water);
+  transform: scale(1.15);
+}
+.drip-dot__fill {
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff 0 12%, #5fd3f7 45%, #1f8fd0);
+  box-shadow: 0 0 10px rgb(56 182 240 / 0.7);
+  animation: drip-wobble 3s ease-in-out infinite;
+}
+@keyframes drip-wobble {
+  0%,
+  100% {
+    border-radius: 50%;
+  }
+  33% {
+    border-radius: 46% 54% 52% 48% / 54% 46% 54% 46%;
+  }
+  66% {
+    border-radius: 54% 46% 48% 52% / 46% 54% 46% 54%;
+  }
+}
+.drip-drop {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  width: 8px;
+  height: 11px;
+  margin-left: -4px;
+  opacity: 0;
+  pointer-events: none;
+  filter: drop-shadow(0 0 4px rgb(56 182 240 / 0.7));
+}
+.drip-bubble {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+  border: 1px solid rgb(143 214 247 / 0.8);
+  background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / 0.8), rgb(95 211 247 / 0.2) 60%, transparent 70%);
+}
+.drip-ripple {
+  position: absolute;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 50%;
+  pointer-events: none;
+  border: 1.5px solid rgb(95 211 247 / 0.8);
+}
+
 /* JS intro эхлэхээс өмнө нуугдана; JS ажиллахгүй бол 4с-ийн дараа гарч ирнэ */
 .hero-pre {
   opacity: 0;
@@ -141,6 +290,120 @@ body {
   }
 }
 
+/* ---- Navbar: шингэн шилэн капсул (Navbar.tsx) ---- */
+@property --nav-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+.nav-glass {
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--color-white) 70%, transparent),
+    color-mix(in oklab, var(--color-white) 48%, transparent)
+  );
+  border: 1px solid color-mix(in oklab, var(--color-abyss) 9%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.3),
+    0 18px 50px -26px rgb(0 0 0 / 0.5);
+  backdrop-filter: blur(22px) saturate(170%);
+  -webkit-backdrop-filter: blur(22px) saturate(170%);
+}
+.nav-glass--solid {
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--color-white) 88%, transparent),
+    color-mix(in oklab, var(--color-white) 74%, transparent)
+  );
+}
+/* хүрээгээр гэрлийн гялбаа аажмаар эргэлдэнэ */
+.nav-glass::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  padding: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: conic-gradient(
+    from var(--nav-angle),
+    transparent 0 62%,
+    color-mix(in oklab, var(--color-aqua) 90%, transparent) 76%,
+    rgb(255 255 255 / 0.9) 80%,
+    transparent 92%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: nav-glint 9s linear infinite;
+}
+@keyframes nav-glint {
+  to {
+    --nav-angle: 360deg;
+  }
+}
+/* идэвхтэй/hover холбоосны ард гулсах гялгар усан дусал */
+.nav-drop {
+  background: radial-gradient(
+    120% 140% at 30% 15%,
+    color-mix(in oklab, var(--color-aqua) 38%, transparent),
+    color-mix(in oklab, var(--color-water) 16%, transparent) 70%
+  );
+  border: 1px solid color-mix(in oklab, var(--color-aqua) 35%, transparent);
+  box-shadow:
+    inset 0 1px 1px rgb(255 255 255 / 0.5),
+    inset 0 -3px 8px color-mix(in oklab, var(--color-water) 30%, transparent),
+    0 6px 18px -8px color-mix(in oklab, var(--color-water) 80%, transparent);
+}
+/* лого: брэндийн сүлд үргэлж цайвар дэвсгэр дээр, усан туяатай */
+.nav-logo {
+  background: radial-gradient(circle at 35% 30%, #fff, #e6f3fb);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.6),
+    0 14px 40px -16px rgb(0 0 0 / 0.55),
+    0 0 32px -8px color-mix(in oklab, var(--color-water) 55%, transparent);
+}
+
+/* Утасны цэс: гүн усны дэвсгэр + хөөрөх бөмбөлөг */
+html.menu-open {
+  overflow: hidden;
+}
+.menu-depths {
+  background:
+    radial-gradient(60% 40% at 85% 8%, rgb(56 182 240 / 0.22), transparent 70%),
+    radial-gradient(55% 35% at 5% 95%, rgb(95 211 247 / 0.14), transparent 70%),
+    linear-gradient(180deg, #06243f, #020d1c);
+}
+.menu-bubble {
+  position: absolute;
+  bottom: -24px;
+  border-radius: 50%;
+  pointer-events: none;
+  border: 1px solid rgb(143 214 247 / 0.35);
+  background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / 0.7), rgb(95 211 247 / 0.15) 60%, transparent 70%);
+  animation: menu-bubble linear infinite;
+}
+@keyframes menu-bubble {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.8;
+  }
+  50% {
+    transform: translate(10px, -55vh);
+  }
+  100% {
+    transform: translate(-6px, -115vh);
+    opacity: 0;
+  }
+}
+
 /* Усны дусал хэлбэртэй хулганы заагч (DropCursor.tsx). Бичих талбарт хөтчийн заагч үлдэнэ. */
 html.drop-cursor,
 html.drop-cursor * {
@@ -149,53 +412,105 @@ html.drop-cursor * {
 html.drop-cursor :is(input:not([type="checkbox"], [type="radio"], [type="button"], [type="submit"]), textarea, [contenteditable="true"]) {
   cursor: text;
 }
-.drop-cursor-drop {
+.drop-cursor-svg {
   position: fixed;
-  left: -11px;
-  top: -11px;
+  inset: 0;
   z-index: 100;
-  width: 22px;
-  height: 22px;
+  width: 100vw;
+  height: 100vh;
+  overflow: visible;
+  pointer-events: none;
+}
+/* Усан дусал линз: backdrop-filter-ээр доорх бүхнийг хугалж томруулна (DropCursor.tsx #drop-lens).
+   url() дэмждэггүй хөтөчид эхний мөрийн энгийн шил үлдэнэ. */
+@property --halo-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+.cursor-lens {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 100;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   pointer-events: none;
   opacity: 0;
+  border: 1px solid rgb(143 214 247 / 0.55);
+  /* гэрлийн тусгал (зүүн дээд), цугларсан гэрэл (баруун доод), ирмэг рүү бараан — хугарлын ирмэг */
+  background:
+    radial-gradient(circle at 30% 24%, rgb(255 255 255 / 0.5) 0 6%, transparent 17%),
+    radial-gradient(circle at 70% 80%, rgb(255 255 255 / 0.2) 0 5%, transparent 20%),
+    radial-gradient(circle, transparent 62%, rgb(56 182 240 / 0.12) 82%, rgb(2 13 28 / 0.3) 100%);
+  box-shadow:
+    inset 0 0 10px rgb(2 13 28 / 0.3),
+    inset 0 -4px 10px rgb(95 211 247 / 0.18),
+    0 6px 18px -6px rgb(0 0 0 / 0.45),
+    0 0 16px -4px rgb(56 182 240 / 0.45);
+  -webkit-backdrop-filter: saturate(1.4) brightness(1.06);
+  backdrop-filter: saturate(1.4) brightness(1.06);
+  backdrop-filter: url(#drop-lens);
   transition: opacity 0.3s;
   will-change: transform;
-  /* гэрлийн тусгал (зүүн дээд), дотор цугларсан гэрэл (баруун доод), ирмэг рүү цэнхэр */
-  background:
-    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.95) 0 9%, rgba(255, 255, 255, 0) 24%),
-    radial-gradient(circle at 64% 76%, rgba(255, 255, 255, 0.75) 0 7%, rgba(255, 255, 255, 0) 30%),
-    radial-gradient(circle, rgba(60, 195, 240, 0.06) 40%, rgba(0, 120, 190, 0.5) 100%);
+}
+/* хүрээгээр гэрлийн гялбаа эргэлдэнэ */
+.cursor-lens::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  padding: 1.5px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from var(--halo-angle),
+    transparent 0 55%,
+    rgb(255 255 255 / 0.95) 72%,
+    rgb(95 211 247 / 0.9) 80%,
+    transparent 92%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: halo-spin 3.2s linear infinite;
+}
+@keyframes halo-spin {
+  to {
+    --halo-angle: 360deg;
+  }
+}
+/* дарах цэгийг заах гэрэлтэй цэг */
+.cursor-dot {
+  position: fixed;
+  left: -3.5px;
+  top: -3.5px;
+  z-index: 101;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at 35% 30%, #fff, #5fd3f7 55%, #1f8fd0);
   box-shadow:
-    inset 0 1px 2px rgba(255, 255, 255, 0.85),
-    inset 0 -2px 4px rgba(4, 33, 58, 0.2),
-    0 3px 8px -2px rgba(4, 33, 58, 0.35);
-  backdrop-filter: saturate(1.8) brightness(1.1);
+    0 0 8px rgb(95 211 247 / 0.8),
+    0 0 0 1px rgb(255 255 255 / 0.35);
+  transition: opacity 0.3s;
+  will-change: transform;
 }
-.drop-cursor-tail {
-  left: -4px;
-  top: -4px;
-  width: 8px;
-  height: 8px;
-  transition: none;
-}
-.drop-cursor-ring,
-.drop-cursor-bead {
+.drop-cursor-ring {
   position: fixed;
   z-index: 100;
   border-radius: 50%;
   pointer-events: none;
-}
-.drop-cursor-ring {
   width: 56px;
   height: 56px;
   border: 1.5px solid rgba(0, 120, 190, 0.55);
   box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.8);
-}
-.drop-cursor-bead {
-  width: 5px;
-  height: 5px;
-  background: radial-gradient(circle at 35% 30%, #fff 0 20%, rgba(60, 195, 240, 0.9) 60%, rgba(0, 120, 190, 0.9));
 }
 
 @keyframes ripple {
@@ -244,18 +559,6 @@ html.drop-cursor :is(input:not([type="checkbox"], [type="radio"], [type="button"
   animation: bubble-rise 2.4s ease-in infinite;
 }
 
-@keyframes nudge {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(6px);
-  }
-}
-.animate-nudge {
-  animation: nudge 1.6s ease-in-out infinite;
-}
 
 @media (prefers-reduced-motion: reduce) {
   *,

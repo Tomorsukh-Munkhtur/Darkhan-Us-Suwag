@@ -1,35 +1,51 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { createContext, useContext, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { seeded } from "@/lib/seeded";
 
 gsap.registerPlugin(ScrollTrigger);
 
-/** Visual-ийн scroll-д холбогдсон timeline үүсгэнэ. */
+/**
+ * WaterJourney тогтсон (pin) үед visual хөдлөхгүй тул timeline-ийг scroll биш шатны явцаар удирдана:
+ * visual timeline-аа бүртгүүлж, буцаах функцээр бүртгэлээс гарна.
+ */
+export const ScrubDriver = createContext<((tl: gsap.core.Timeline) => () => void) | null>(null);
+
+/** Visual-ийн timeline: ScrubDriver байвал түүгээр, үгүй бол өөрийн scroll-оор удирдагдана. */
 function useScrub<T extends Element>(build: (tl: gsap.core.Timeline, q: (s: string) => Element[]) => void) {
   const ref = useRef<T>(null);
+  const drive = useContext(ScrubDriver);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    let release: (() => void) | undefined;
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        // Карт дэлгэцийн голд ирэхэд анимац дуусна
-        scrollTrigger: { trigger: el, start: "top 90%", end: "center 55%", scrub: 0.8 },
-      });
+      const tl = gsap.timeline(
+        drive
+          ? { paused: true }
+          : // Карт дэлгэцийн голд ирэхэд анимац дуусна
+            { scrollTrigger: { trigger: el, start: "top 90%", end: "center 55%", scrub: 0.8 } },
+      );
       build(tl, gsap.utils.selector(el));
+      release = drive?.(tl);
     }, el);
-    return () => ctx.revert();
+    return () => {
+      release?.();
+      ctx.revert();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return ref;
 }
 
-const W = "#0078be";
-const INK = "#04213a";
-const MIST = "#56758d";
-const LINE = "#9cc7e0";
+// Усан доорх (dark) өнгө: ус тод цэнхэр, бэх цайвар, гадаргуу хар хөх
+const W = "#38b6f0";
+const INK = "#e4f2fb";
+const MIST = "#8fb3c9";
+const LINE = "#3f78a0";
+const SURFACE = "#0f3a5e";
 
 /* 2.1 — Эх үүсвэр: terrain + гол + гүний уст давхарга */
 export function SourceVisual() {
@@ -43,8 +59,8 @@ export function SourceVisual() {
     <svg ref={ref} viewBox="0 0 400 400" className="h-full w-full">
       <defs>
         <linearGradient id="sv-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#d6eefb" />
-          <stop offset="1" stopColor="#f5fbff" />
+          <stop offset="0" stopColor="#0f3a5e" />
+          <stop offset="1" stopColor="#0b2e4c" />
         </linearGradient>
         <linearGradient id="sv-aq" x1="0" x2="1">
           <stop offset="0" stopColor={W} stopOpacity="0" />
@@ -53,9 +69,9 @@ export function SourceVisual() {
         </linearGradient>
       </defs>
       <rect width="400" height="400" fill="url(#sv-sky)" />
-      <path className="mtn" d="M0 210 L70 120 L130 180 L200 90 L270 170 L330 110 L400 190 V260 H0Z" fill="#b7d9ec" />
-      <path className="mtn" d="M0 240 L90 170 L160 220 L240 150 L320 215 L400 180 V270 H0Z" fill="#94c3de" />
-      <rect y="255" width="400" height="145" fill="#e2eef4" />
+      <path className="mtn" d="M0 210 L70 120 L130 180 L200 90 L270 170 L330 110 L400 190 V260 H0Z" fill="#16426a" />
+      <path className="mtn" d="M0 240 L90 170 L160 220 L240 150 L320 215 L400 180 V270 H0Z" fill="#1d5783" />
+      <rect y="255" width="400" height="145" fill="#0a2a45" />
       <rect y="255" width="400" height="2" fill={LINE} opacity=".8" />
       {/* Хамгаалалтын бүс */}
       {[70, 50, 30].map((r, i) => (
@@ -114,10 +130,10 @@ export function ExtractionVisual() {
   });
   return (
     <svg ref={ref} viewBox="0 0 400 400" className="h-full w-full">
-      <rect width="400" height="120" fill="#e6f5fd" />
-      <rect y="120" width="400" height="80" fill="#e4d6b8" opacity=".6" />
-      <rect y="200" width="400" height="90" fill="#d3bf98" opacity=".6" />
-      <rect y="290" width="400" height="110" fill="#c3e5f6" />
+      <rect width="400" height="120" fill="#0d3558" />
+      <rect y="120" width="400" height="80" fill="#6b5a3a" opacity=".45" />
+      <rect y="200" width="400" height="90" fill="#57472c" opacity=".5" />
+      <rect y="290" width="400" height="110" fill="#0f4670" />
       <text x="16" y="112" fill={MIST} fontSize="10" letterSpacing="3">
         GROUND
       </text>
@@ -126,10 +142,10 @@ export function ExtractionVisual() {
         ГҮНИЙ УС
       </text>
       {/* худгийн хоолой */}
-      <rect x="185" y="95" width="30" height="265" rx="4" fill="#ffffff" stroke={LINE} />
+      <rect x="185" y="95" width="30" height="265" rx="4" fill={SURFACE} stroke={LINE} />
       <rect className="shaft-fill" x="191" y="100" width="18" height="255" rx="3" fill={W} opacity=".25" />
       {/* насос байшин */}
-      <rect x="160" y="55" width="80" height="45" rx="6" fill="#ffffff" stroke={W} strokeOpacity=".5" />
+      <rect x="160" y="55" width="80" height="45" rx="6" fill={SURFACE} stroke={W} strokeOpacity=".5" />
       <text x="200" y="83" fill={INK} fontSize="11" textAnchor="middle" letterSpacing="3">
         PUMP
       </text>
@@ -174,7 +190,7 @@ export function TreatmentVisual() {
   });
   return (
     <svg ref={ref} viewBox="0 0 400 400" className="h-full w-full">
-      <rect x="60" y="50" width="170" height="300" rx="22" fill="#ffffff" stroke={LINE} />
+      <rect x="60" y="50" width="170" height="300" rx="22" fill={SURFACE} stroke={LINE} />
       <rect className="murk" x="64" y="70" width="162" height="276" rx="18" fill="#6d5a36" opacity=".35" />
       {dots.map((d, i) => (
         <circle key={i} className="dirt" cx={d.x} cy={d.y} r={d.r} fill="#a68a55" opacity=".8" />
@@ -224,7 +240,7 @@ export function ReservoirVisual() {
           <stop offset="1" stopColor={W} stopOpacity=".9" />
         </linearGradient>
       </defs>
-      <path d="M90 90 V310 A110 26 0 0 0 310 310 V90" fill="#ffffff" stroke={LINE} strokeWidth="2" />
+      <path d="M90 90 V310 A110 26 0 0 0 310 310 V90" fill={SURFACE} stroke={LINE} strokeWidth="2" />
       <g clipPath="url(#tank-clip)">
         <g className="level" transform="translate(0 220)">
           <g className="animate-[wave_4s_linear_infinite]">
@@ -235,7 +251,7 @@ export function ReservoirVisual() {
           </g>
         </g>
       </g>
-      <ellipse cx="200" cy="90" rx="110" ry="26" fill="#eaf6fd" stroke={LINE} strokeWidth="2" />
+      <ellipse cx="200" cy="90" rx="110" ry="26" fill="#123f66" stroke={LINE} strokeWidth="2" />
       {[150, 200, 250].map((y) => (
         <line key={y} x1="300" y1={y} x2="312" y2={y} stroke={MIST} strokeOpacity=".6" />
       ))}
@@ -269,7 +285,7 @@ export function NetworkVisual() {
   const ref = useScrub<SVGSVGElement>((tl, q) => {
     tl.fromTo(q(".pipe"), { strokeDashoffset: 1 }, { strokeDashoffset: 0, stagger: 0.12, ease: "none" }, 0).fromTo(
       q(".bld"),
-      { fill: "#d5e6f0" },
+      { fill: "#16405f" },
       { fill: "#5bb8e8", stagger: { each: 0.02, from: "start" } },
       0.3,
     );
@@ -282,11 +298,11 @@ export function NetworkVisual() {
         WATER SOURCE
       </text>
       {blocks.map((b, i) => (
-        <rect key={i} className="bld" x={b.x} y={b.y} width="26" height={b.h} rx="3" fill="#d5e6f0" />
+        <rect key={i} className="bld" x={b.x} y={b.y} width="26" height={b.h} rx="3" fill="#16405f" />
       ))}
       {pipes.map((d) => (
         <g key={d}>
-          <path d={d} stroke="#d3e5ef" strokeWidth="4" fill="none" />
+          <path d={d} stroke="#1d4a6c" strokeWidth="4" fill="none" />
           <path
             className="pipe"
             d={d}
@@ -295,7 +311,7 @@ export function NetworkVisual() {
             fill="none"
             pathLength={1}
             strokeDasharray="1"
-            style={{ filter: "drop-shadow(0 0 5px rgba(0, 120, 190, 0.45))" }}
+            style={{ filter: "drop-shadow(0 0 6px rgba(56, 182, 240, 0.55))" }}
           />
         </g>
       ))}
@@ -311,7 +327,7 @@ export function HomeVisual() {
   const ref = useScrub<SVGSVGElement>((tl, q) => {
     tl.fromTo(q(".hp"), { strokeDashoffset: 1 }, { strokeDashoffset: 0, stagger: 0.2, ease: "none" })
       .fromTo(q(".house"), { opacity: 0.25 }, { opacity: 1 }, 0.5)
-      .fromTo(q(".win"), { fill: "#d5e3ec" }, { fill: "#ffc94d" }, 0.7);
+      .fromTo(q(".win"), { fill: "#1a3a55" }, { fill: "#ffc94d" }, 0.7);
   });
   return (
     <svg ref={ref} viewBox="0 0 400 400" className="h-full w-full">
@@ -325,9 +341,9 @@ export function HomeVisual() {
       </text>
       <g className="house">
         <path d="M110 250 L200 180 L290 250" fill="none" stroke={INK} strokeWidth="3" strokeLinejoin="round" />
-        <rect x="125" y="245" width="150" height="110" fill="#ffffff" stroke={INK} strokeWidth="3" />
-        <rect className="win" x="145" y="265" width="36" height="30" fill="#d5e3ec" />
-        <rect className="win" x="219" y="265" width="36" height="30" fill="#d5e3ec" />
+        <rect x="125" y="245" width="150" height="110" fill={SURFACE} stroke={INK} strokeWidth="3" />
+        <rect className="win" x="145" y="265" width="36" height="30" fill="#1a3a55" />
+        <rect className="win" x="219" y="265" width="36" height="30" fill="#1a3a55" />
         <text x="200" y="335" fill={INK} fontSize="12" textAnchor="middle" letterSpacing="4">
           HOME
         </text>

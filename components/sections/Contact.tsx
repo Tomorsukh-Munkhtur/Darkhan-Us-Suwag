@@ -23,7 +23,7 @@ export default function Contact() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.9 }}
-          className="font-display text-4xl font-semibold leading-[1.05] sm:text-6xl lg:text-7xl"
+          className="text-display"
         >
           УСНЫ АСУУДАЛ
           <br />
@@ -52,13 +52,13 @@ export default function Contact() {
 
           <a
             href={`tel:${contact.emergency}`}
-            className="group relative flex flex-col justify-between overflow-hidden rounded-3xl bg-alert p-8 text-white"
+            className="group relative flex flex-col justify-between overflow-hidden rounded-3xl bg-alert p-8 text-[#fff]"
           >
-            <span className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/20 transition-transform duration-700 group-hover:scale-[4]" />
+            <span className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[#fff]/20 transition-transform duration-700 group-hover:scale-[4]" />
             <span className="relative flex items-center gap-2 text-xs tracking-[0.3em]">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-white" /> ЯАРАЛТАЙ ХОЛБОО
+              <span className="h-2 w-2 animate-pulse rounded-full bg-[#fff]" /> ЯАРАЛТАЙ ХОЛБОО
             </span>
-            <span className="relative mt-10 font-display text-3xl font-bold leading-tight sm:text-4xl">
+            <span className="relative mt-10 text-h3">
               24/7 ЯАРАЛТАЙ
               <br />
               ДУУДЛАГА
@@ -79,7 +79,7 @@ export default function Contact() {
               values="M0 60 C240 20 480 100 720 60 S1200 20 1440 60 V120 H0Z;M0 50 C240 90 480 30 720 70 S1200 90 1440 50 V120 H0Z;M0 60 C240 20 480 100 720 60 S1200 20 1440 60 V120 H0Z"
             />
           </path>
-          <path fill="#e3f2fb">
+          <path className="fill-shallow">
             <animate
               attributeName="d"
               dur="7s"

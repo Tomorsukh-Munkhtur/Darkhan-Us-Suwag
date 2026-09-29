@@ -66,7 +66,7 @@ export default function Projects() {
                 <span className="font-display text-xs tracking-[0.3em] text-mist">PROJECT {p.n}</span>
                 <span className="font-display text-sm text-water">{p.year}</span>
               </div>
-              <h3 className="mt-8 font-display text-2xl font-semibold leading-snug">{p.title}</h3>
+              <h3 className="mt-8 text-h4 font-bold">{p.title}</h3>
               <p className="mt-3 text-sm text-mist">{p.location}</p>
               <div className="mt-auto pt-10">
                 <Progress value={p.progress} />
@@ -102,7 +102,7 @@ export default function Projects() {
                 ×
               </button>
               <p className="eyebrow">PROJECT {open.n}</p>
-              <h3 className="mt-3 font-display text-3xl font-semibold">{open.title}</h3>
+              <h3 className="mt-3 text-h3">{open.title}</h3>
               {/* TODO: төслийн зураг */}
               <div className="mt-6 flex aspect-[16/7] items-center justify-center rounded-2xl bg-gradient-to-br from-shallow to-aqua/30 text-xs tracking-widest text-mist">
                 ЗУРАГ

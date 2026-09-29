@@ -35,8 +35,8 @@ function NewsCard({ n, big = false, className = "" }: { n: Item; big?: boolean; 
       <NewsCover kind={n.kind} className="absolute inset-0 h-full w-full transition-transform duration-700 ease-out group-hover:scale-105" />
       {n.urgent && (
         <span className="absolute right-4 top-4 flex h-3 w-3">
-          <span className="absolute inset-0 animate-ping rounded-full bg-white/80" />
-          <span className="relative h-3 w-3 rounded-full bg-white" />
+          <span className="absolute inset-0 animate-ping rounded-full bg-[#fff]/80" />
+          <span className="relative h-3 w-3 rounded-full bg-[#fff]" />
         </span>
       )}
       <div
@@ -48,7 +48,7 @@ function NewsCard({ n, big = false, className = "" }: { n: Item; big?: boolean; 
           <span className={`rounded-full border px-3 py-1 text-[10px] font-bold tracking-[0.2em] ${kindColor[n.kind]}`}>{n.kind}</span>
           <time className="text-xs text-mist">{n.date}</time>
         </div>
-        <h3 className={`font-bold leading-snug ${big ? "mt-4 text-xl sm:text-2xl" : "mt-3 line-clamp-2 text-[15px]"}`}>{n.title}</h3>
+        <h3 className={`font-bold leading-snug ${big ? "mt-4 text-h4" : "mt-3 line-clamp-2 text-[15px]"}`}>{n.title}</h3>
         {big && (
           <>
             <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-abyss/75">{n.excerpt}</p>

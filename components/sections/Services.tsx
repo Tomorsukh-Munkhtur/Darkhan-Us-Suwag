@@ -18,7 +18,7 @@ const arts: Record<string, React.FC<{ className?: string }>> = {
 function Drop() {
   return (
     <svg width="12" height="15" viewBox="0 0 14 18" className="shrink-0" aria-hidden>
-      <path d="M7 0C7 0 0 8 0 11.5C0 15.1 3.1 18 7 18S14 15.1 14 11.5C14 8 7 0 7 0Z" fill="#0078be" />
+      <path d="M7 0C7 0 0 8 0 11.5C0 15.1 3.1 18 7 18S14 15.1 14 11.5C14 8 7 0 7 0Z" fill="#38b6f0" />
     </svg>
   );
 }

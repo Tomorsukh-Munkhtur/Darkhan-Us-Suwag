@@ -35,7 +35,7 @@ export default function CustomerServices() {
               className="group rounded-2xl border border-abyss/10 bg-white/70 p-5 transition hover:border-water/50 hover:bg-white"
             >
               <span className="font-display text-xs text-mist">0{i + 1}</span>
-              <h3 className="mt-6 font-display text-base group-hover:text-water">{s.title}</h3>
+              <h3 className="mt-6 font-medium group-hover:text-water">{s.title}</h3>
               <p className="mt-2 text-xs leading-relaxed text-mist">{s.text}</p>
             </motion.a>
           ))}
@@ -44,7 +44,7 @@ export default function CustomerServices() {
         <div id="request" className="glass mt-10 grid gap-10 rounded-3xl p-6 sm:p-10 lg:grid-cols-[1fr_1.4fr]">
           <div>
             <p className="eyebrow">Онлайн хүсэлт</p>
-            <h3 className="mt-3 font-display text-2xl sm:text-3xl">Хүсэлтийн төрлөө сонгоно уу</h3>
+            <h3 className="mt-3 text-h3">Хүсэлтийн төрлөө сонгоно уу</h3>
             <div className="mt-6 flex flex-col gap-2">
               {requestTypes.map((r) => (
                 <button
@@ -74,7 +74,7 @@ export default function CustomerServices() {
                 className="flex flex-col items-center justify-center rounded-2xl border border-leaf/30 bg-leaf/5 p-10 text-center"
               >
                 <span className="text-4xl">💧</span>
-                <p className="mt-4 font-display text-xl">Хүсэлт хүлээн авлаа</p>
+                <p className="mt-4 text-h4">Хүсэлт хүлээн авлаа</p>
                 <p className="mt-2 text-sm text-mist">Ажлын 1–3 өдөрт холбогдох болно.</p>
                 <button onClick={() => setSent(false)} className="mt-6 text-sm text-water">
                   Шинэ хүсэлт →

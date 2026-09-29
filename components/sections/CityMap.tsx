@@ -59,7 +59,7 @@ function StepCard({ s, i, compact = false }: { s: CityStep; i: number; compact?:
       <p className="font-display text-[11px] tracking-[0.3em] text-mist">
         {pad(i + 1)} / {pad(N)}
       </p>
-      {!compact && <h3 className="mt-1.5 text-xl font-extrabold">{s.label}</h3>}
+      {!compact && <h3 className="mt-1.5 text-h4 font-bold">{s.label}</h3>}
       <p className={`mt-2 text-sm leading-relaxed text-abyss/80 ${compact ? "line-clamp-3" : ""}`}>{s.text}</p>
       <dl className={`grid gap-x-4 gap-y-2 ${compact ? "mt-3 grid-cols-2 text-xs" : "mt-4 grid-cols-1 text-sm"}`}>
         {s.facts.map((f) => (
@@ -161,13 +161,13 @@ export default function CityMap() {
         {/* уншигдахуйц байлгах бүрхүүл */}
         <div className="pointer-events-none absolute inset-x-0 top-0 h-60 bg-gradient-to-b from-foam via-foam/75 to-transparent" />
         <div className="pointer-events-none absolute inset-y-0 left-0 w-3/4 bg-gradient-to-r from-foam/90 via-foam/60 to-transparent lg:hidden" />
-        <div className="pointer-events-none absolute inset-y-0 left-1/2 hidden w-[36rem] -translate-x-1/2 bg-[radial-gradient(closest-side,rgba(245,251,255,.9),rgba(245,251,255,0))] lg:block" />
+        <div className="pointer-events-none absolute inset-y-0 left-1/2 hidden w-[36rem] -translate-x-1/2 bg-[radial-gradient(closest-side,rgba(4,26,46,.9),rgba(4,26,46,0))] lg:block" />
 
         <div className="absolute inset-x-0 top-24 z-10 px-4 text-center sm:top-28">
           <p className="eyebrow">
             <span className="text-mist">05</span> — Darkhan City Map
           </p>
-          <h2 className="mt-3 font-display text-2xl font-semibold sm:text-5xl">
+          <h2 className="mt-3 text-h2">
             ДАРХАН ХОТЫН <span className="text-water">МАП</span>
           </h2>
         </div>
@@ -179,7 +179,7 @@ export default function CityMap() {
               <div className="spine-fill absolute inset-0 origin-top rounded-full bg-gradient-to-b from-aqua to-water" />
               <div className="spine-drop absolute left-1/2 -translate-x-1/2 -translate-y-1/2">
                 <svg width="14" height="18" viewBox="0 0 14 18" className="drop-shadow-[0_2px_6px_rgba(0,120,190,.5)]" aria-hidden>
-                  <path d="M7 0C7 0 0 8 0 11.5C0 15.1 3.1 18 7 18S14 15.1 14 11.5C14 8 7 0 7 0Z" fill="#0078be" />
+                  <path d="M7 0C7 0 0 8 0 11.5C0 15.1 3.1 18 7 18S14 15.1 14 11.5C14 8 7 0 7 0Z" fill="#38b6f0" />
                 </svg>
               </div>
             </div>
@@ -254,7 +254,7 @@ export default function CityMap() {
         {/* тайлбар */}
         <div className="absolute bottom-6 left-8 z-10 hidden flex-col gap-2 rounded-2xl bg-white/80 px-4 py-3 text-xs text-abyss/80 shadow-sm backdrop-blur lg:flex">
           <span className="flex items-center gap-2">
-            <span className="h-1 w-6 rounded-full bg-[#0a8fd6]" /> Цэвэр усны шугам
+            <span className="h-1 w-6 rounded-full bg-[#38b6f0]" /> Цэвэр усны шугам
           </span>
           <span className="flex items-center gap-2">
             <span className="h-1 w-6 rounded-full bg-[#1fa37a]" /> Бохир усны шугам

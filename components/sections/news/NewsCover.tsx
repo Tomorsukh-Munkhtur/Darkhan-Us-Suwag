@@ -4,23 +4,23 @@ import type { NewsKind } from "@/lib/content";
 /** Мэдээний зураг байхгүй үед төрлөөр нь өнгө, дүрс тэмдэгтэй cover. Бодит зураг ирвэл News.tsx дээр солино. */
 const theme: Record<NewsKind, { from: string; to: string; icon: React.ReactNode }> = {
   МЭДЭЭ: {
-    from: "#c4e8f9",
+    from: "#0f3a5e",
     to: "#2f9bd6",
     icon: <path d="M4 5h13v14H6a2 2 0 01-2-2zM17 9h3v8a2 2 0 01-2 2M7 9h7M7 13h7M7 16h4" />,
   },
   ЗАРЛАЛ: {
-    from: "#d3e9f6",
-    to: "#005b92",
+    from: "#0d3050",
+    to: "#1f7fbf",
     icon: <path d="M3 10v4a1 1 0 001 1h3l6 4V5L7 9H4a1 1 0 00-1 1zM17 8a5 5 0 010 8M19.5 5.5a9 9 0 010 13" />,
   },
   ЗӨВЛӨМЖ: {
-    from: "#d6f2e4",
+    from: "#0c3a2e",
     to: "#1fa37a",
     icon: <path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0012 3z" />,
   },
   ЗАСВАР: {
-    from: "#fde2e5",
-    to: "#d7263d",
+    from: "#3a1520",
+    to: "#e0445a",
     icon: (
       <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94z" />
     ),

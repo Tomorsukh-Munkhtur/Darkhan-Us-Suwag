@@ -1,19 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope, Unbounded } from "next/font/google";
+import { Ubuntu } from "next/font/google";
 import "./globals.css";
 
-const manrope = Manrope({
+// Ubuntu: гарчиг, үндсэн текст хоёуланд. cyrillic-ext-д Ү ү Ө ө орно.
+const ubuntu = Ubuntu({
+  weight: ["300", "400", "500", "700"],
   subsets: ["latin", "cyrillic", "cyrillic-ext"],
-  variable: "--font-manrope",
+  variable: "--font-ubuntu",
   display: "swap",
-});
-
-// Unbounded-д Ү ү Ө ө үсэг байхгүй → Arial fallback-ын оронд Manrope-оор харагдуулна (globals.css --font-display)
-const unbounded = Unbounded({
-  subsets: ["latin", "cyrillic", "cyrillic-ext"],
-  variable: "--font-unbounded",
-  display: "swap",
-  adjustFontFallback: false,
 });
 
 export const metadata: Metadata = {
@@ -28,7 +22,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="mn" className={`${manrope.variable} ${unbounded.variable}`}>
+    <html lang="mn" className={ubuntu.variable}>
       <body>{children}</body>
     </html>
   );

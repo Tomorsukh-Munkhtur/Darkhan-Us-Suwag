@@ -30,13 +30,14 @@ components/
   SmoothScroll.tsx       Lenis ↔ ScrollTrigger синк
   Navbar.tsx             desktop цэс + mobile ☰
   OutageBanner.tsx       "ОДОО: ус тасалдсан" мэдэгдэл
-  DropCursor.tsx         усны дусал хэлбэртэй хулганы заагч (сунах, томрох, цацрах)
+  DropCursor.tsx         усан дусал линз: доорх бүхнийг хугалж томруулна (backdrop-filter SVG, Chrome/Edge; бусад хөтөчид энгийн шил), төвд цэг, дарахад цацарна
   three/WaterSurface.tsx WebGL усны shader (mouse ripple, гэрэл, zoom)
-  three/HeroWater.tsx    Hero: тунгалаг усан доорх гарчиг (долгионы симуляц, дусал, caustic, scroll-оор шумбана)
+  three/HeroWater.tsx    Hero: тунгалаг усан доорх гарчиг (долгионы симуляц, дусал, caustic); scroll-оор гадаргууг нэвтлэн шумбаж (цацраг, бөмбөлөг), ард нь WaterJourney тодорно
   sections/
     Hero.tsx             01 УС БҮХНИЙ ЭХЛЭЛ
-    WaterJourney.tsx     02 УСНЫ АЯЛАЛ (6 үе шат, sticky progress rail)
-    journey/Visuals.tsx  үе шат бүрийн scroll-scrub SVG animation
+    WaterJourney.tsx     02 УСНЫ АЯЛАЛ (нэг тогтсон самбар: 6 шат ус угаах шилжилтээр солигдоно)
+    journey/Visuals.tsx  үе шат бүрийн SVG animation (шатны явцаар удирдагдана)
+    journey/DripDots.tsx шатны хуудаслалт: дусал дусна, буцахад бөмбөлөг хөөрнө
     Services.tsx         03 Бидний үйл ажиллагаа
     WaterQuality.tsx     04 Усны чанар (counter + интерактив үзүүлэлт)
     CityMap.tsx          05 Дархан хотын интерактив схем + засварын цэг
@@ -52,6 +53,8 @@ lib/content.ts           БҮХ агуулга нэг дор
 Бүх текст, тоо, газрын зургийн цэг, төсөл, мэдээ `lib/content.ts` файлд байна.
 `// TODO` гэж тэмдэглэсэн утгуудыг (хүчин чадал, утас, шинжилгээний тоо г.м.) байгууллагын бодит мэдээллээр солино.
 `outages` массивыг хоослоход ус тасалдлын banner болон map дээрх улаан цэг алга болно.
+
+Өнгө: сайт бүхэлдээ dark ("усны гүн"), зөвхөн Hero-ийн гадаргуу цайвар. Token-ууд `app/globals.css`-д: dark утга `:root`-д, цайвар утга `.theme-light`-д (Hero болон гадаргуу дээрх navbar). SVG зургууд dark өнгөтэй шууд зурагдсан.
 
 ## Дараагийн алхам
 
