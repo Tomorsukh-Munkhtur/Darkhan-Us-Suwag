@@ -1,0 +1,15 @@
+node_modules
+.next
+out
+next-env.d.ts
+*.tsbuildinfo
+.env*.local
+.DS_Store
+
+# орчны хувьсагч (жишээ файлаас бусад)
+.env
+.env.*
+!.env.example
+
+# local agent тохиргоо (машин бүрт өөр)
+.claude/settings.local.json
