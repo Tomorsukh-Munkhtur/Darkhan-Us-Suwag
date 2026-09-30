@@ -6,10 +6,11 @@ import { useEffect, useSyncExternalStore } from "react";
  * хүсэлтэй нарын хамгийн өндөр priority-тэй нь зөвшөөрөл авч, бусад нь зогсоно (frameloop="never").
  * Зогссон canvas сүүлийн кадраа харуулсаар байна (WaterSurface хөлдсөн дэвсгэр болно).
  *
- * Санал болгох priority: HeroWater (3) > Journey 3D (2) > WaterSurface (1).
+ * Санал болгох priority: HeroWater (3) > Services-ийн картууд (2.5–2.9, харагдах хувиар; useCardRenderSlot)
+ * > Journey 3D (2) > WaterSurface (1). (Картын мөр гарч ирэхэд Journey хэсэг дэлгэцээс гарч байгаа тул карт давуу.)
  * → Hero шумбалтын үед Journey 3D хүлээнэ; Journey 3D ажиллаж байхад WaterSurface зогсоно.
  */
-export const RENDER_PRIORITY = { heroWater: 3, journey3d: 2, waterSurface: 1 } as const;
+export const RENDER_PRIORITY = { heroWater: 3, serviceCard: 2.5, journey3d: 2, waterSurface: 1 } as const;
 
 type Entry = { id: string; priority: number; wants: boolean };
 export type RenderSlotState = { id: string; priority: number; wants: boolean; allowed: boolean };

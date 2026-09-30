@@ -192,6 +192,18 @@ body {
   -webkit-mask-image: radial-gradient(ellipse 60% 55% at 50% 55%, rgb(0 0 0 / 0.3), #000 85%);
   mask-image: radial-gradient(ellipse 60% 55% at 50% 55%, rgb(0 0 0 / 0.3), #000 85%);
 }
+/* Картын зургийн хэсэг: 3D (JourneyStage3D) эхний кадраа зурмагц хуучин SVG бүдгэрч нуугдана.
+   SVG нь DOM-д үлдэнэ — WebGL байхгүй / алдаа / context алдагдах / ?journey3d=off үед буцаж харагдана. */
+.journey-visual > svg {
+  transition: opacity 0.35s ease;
+}
+[data-journey-3d="on"] .journey-visual > svg {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.35s ease,
+    visibility 0s linear 0.35s;
+}
 /* картуудыг холбох усны хоолой: scroll хийх тусам ус урсаж дүүрнэ (clip-path-аар) */
 .journey-pipe {
   position: absolute;

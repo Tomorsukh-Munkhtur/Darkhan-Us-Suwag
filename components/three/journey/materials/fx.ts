@@ -132,3 +132,50 @@ export function createGlowMaterial(color: string, opacity = 1) {
     blending: THREE.AdditiveBlending,
   });
 }
+
+/**
+ * View-ийн mask (бүтэн view-ийн quad, render-ийн дараа): аль хэдийн зурсан пикселийг k-гаар үржүүлнэ
+ * (dst = dst · k, blend: ZERO / SRC_ALPHA). k = opacity (хөрш картын CSS opacity-г дуурайна), картын бөөрөнхий
+ * булангаас гадна 0 (тунгалаг) → canvas нь картын хэлбэрийг яг дагана. gl_FragCoord — canvas-ийн device px.
+ */
+export function createViewMaskMaterial() {
+  return new THREE.ShaderMaterial({
+    vertexShader: /* glsl */ `
+      void main() {
+        gl_Position = vec4(position.xy, 0.0, 1.0);
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform vec2 uOrigin;
+      uniform vec2 uSize;
+      uniform float uRadius;
+      uniform vec4 uCorners;
+      uniform float uOpacity;
+      void main() {
+        vec2 p = gl_FragCoord.xy - uOrigin;
+        bool left = p.x < uSize.x * 0.5;
+        bool top = p.y > uSize.y * 0.5;
+        float r = uRadius * (left ? (top ? uCorners.x : uCorners.w) : (top ? uCorners.y : uCorners.z));
+        vec2 h = uSize * 0.5;
+        vec2 q = abs(p - h) - (h - vec2(r));
+        float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+        float inside = 1.0 - smoothstep(-0.5, 0.5, d);
+        gl_FragColor = vec4(0.0, 0.0, 0.0, uOpacity * inside);
+      }
+    `,
+    uniforms: {
+      uOrigin: { value: new THREE.Vector2() },
+      uSize: { value: new THREE.Vector2(1, 1) },
+      uRadius: { value: 0 },
+      uCorners: { value: new THREE.Vector4() },
+      uOpacity: { value: 1 },
+    },
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    blending: THREE.CustomBlending,
+    blendEquation: THREE.AddEquation,
+    blendSrc: THREE.ZeroFactor,
+    blendDst: THREE.SrcAlphaFactor,
+  });
+}

@@ -1761,3 +1761,223 @@ The lab can override the tier (`?tier=`).
 6. **Global CSS:** Tailwind v4 scans the lab files, so their utility classes land in the global stylesheet (measured earlier: +524 B gz on `/`). Accept this, or exclude the lab with `@source not` in `app/globals.css` at integration time.
 7. **Library warning:** `THREE.Clock` deprecation messages come from @react-three/fiber 9.8 internals with three 0.186 (not from project code). They are harmless; track an R3F update.
 8. **No git repository yet** (Phase 0). Integration should land as a reviewable commit.
+
+### 38.8 Production Integration (IMPLEMENTED on branch `feat/journey-3d-integration`)
+
+*Added 2026-09-30. Baseline commit `279f848` on `main` (prototype before integration). The integration changes are uncommitted on the branch for review.*
+
+**The integration differs from §38.4.**
+
+- **§38.4 proposed:** move one single-view canvas between active cards, with the neighbours keeping their SVG.
+- **Why that failed:** on desktop the right neighbour's *visual panel* peeks ~116 px into the viewport, so the old SVG would still be visible. That violates "SVG is fallback only".
+
+**What was built instead: one canvas / one WebGL context, multiple scissored views.**
+
+- `JourneyStage3D` puts **one** transparent canvas inside `.journey-stage`.
+  - It spans the full stage width and the height of the card visual panels (`stageLayout.measureJourneyBand`, set in `measure()`).
+  - It is `pointer-events: none`, so touch scroll and card links pass through.
+- `ViewRenderer` (R3F `useFrame` priority 1) renders one **view** per visible card visual panel. For each view it:
+  - sets a scissored viewport over the panel's content box (the divider border stays visible);
+  - shows only that stage's group, sets that stage's floor height, and poses that stage's camera for its own progress;
+  - renders;
+  - positions that stage's DOM labels (clipped to the panel);
+  - applies a mask pass that multiplies by the card's CSS opacity (dims neighbours) and cuts the card's rounded corners.
+- Every visible panel therefore shows its own live 3D scene, and there is no hand-over pop.
+
+**Scroll → views.**
+
+- `WaterJourney.update()` (the existing ScrollTrigger) calls `computeJourneyViews()` after writing the card transforms and opacities.
+- Progress uses the **existing SVG mapping** (`journeyProgress`): card *i* = `clamp01(pos − (i − 1))`, so it builds while approaching and reaches 1 at centre.
+- Card 01 builds from a new entry ScrollTrigger (`track` "top bottom" → "top top"), because it is already centred when the pin starts.
+- Scrolling back reverses everything.
+
+**SVG = fallback only.**
+
+- Each `.journey-visual` keeps its SVG in the DOM.
+- When the 3D renders its first frame with views, `section[data-journey-3d="on"]` fades the SVG out (0.35 s, CSS in `globals.css`), and `driveVisual` stops tweening hidden SVGs.
+- On WebGL2 absence, initialisation error, context loss, or `?journey3d=off`, the attribute is removed, the SVG timelines are re-synced, and the SVG is shown.
+
+**Render coordinator (active).**
+
+- `Hero.tsx`: `useRenderSlot("hero-water", 3, inView && !dived)`.
+- Journey 3D: priority 2.
+- `WaterSurface`: priority 1. When denied it switches to `frameloop="demand"` (one static frame, no loop). **It is not mounted on LOW.**
+- `HeroWater` and `WaterSurface` are now only mounted when WebGL2 exists. This fixes a pre-existing full-page crash on browsers without WebGL.
+
+**Quality and motion.**
+
+- The tier is auto-detected; QA can override it with `?journey3d=high|medium|low|off`.
+- HIGH/MEDIUM: ambient on (continuous frames). LOW: ambient off (renders only on scroll).
+- A **motion pause button** (bottom-left of the stage, persisted in `localStorage`) stops ambient detail. Structure keeps following scroll.
+- Reduced motion shows completed scenes with no ambient.
+
+**Validation (2026-09-30, headless Chrome + SwiftShader).**
+
+- All 6 production cards show their scene (desktop 1440 × 900 and mobile 390 × 844); right-side content is unchanged.
+- **One** journey canvas (3 canvases in total: Hero, WaterSurface, Journey; 2 on LOW).
+- Reverse-scroll frames are pixel-identical (LOW, card 03↔04 position, reached from 01 and from 06).
+- Lab determinism is still 18/18.
+- No-WebGL: page renders with SVG in all cards.
+- Context loss: SVG returns.
+- `?journey3d=off`: SVG.
+- **Touch scroll could not be exercised:** synthetic touch gestures scroll no page in this headless setup, including a plain test page. It was verified structurally only (canvas `pointer-events: none`, hit-testing reaches the card DOM, no touch listeners).
+
+**Bundle** (gzip, `next build`, vs baseline `279f848`):
+
+- `/` initial JS: 303,940 → 307,382 B (+3.4 KB).
+- CSS: 14,985 → 15,125 B.
+- Lazy journey scene chunk: 15.3 KB. The three/R3F chunk (243 KB) is shared with the hero and already loaded there.
+
+**Note:** `lab/ProductionSim.tsx` still demonstrates the earlier single-view overlay approach. Production uses the multi-view approach described above.
+
+### 38.9 Related: Services "01 Ус хангамж" Faucet → Glass 3D (IMPLEMENTED, same branch)
+
+*Added 2026-09-30.* The flat `SupplyArt` SVG in `components/sections/Services.tsx` has been replaced by `components/three/faucet/SupplyVisual3D.tsx`. The only change to `Services.tsx` is its `arts` map entry. `SupplyArt` is kept as the fallback.
+
+**Scene** (procedural; no GLB, no new dependencies):
+
+- **Faucet:** merged chrome gooseneck, one draw call.
+- **Glass:** double-walled lathe glass tumbler.
+  - HIGH/MEDIUM: `MeshPhysicalMaterial` transmission (refraction). MEDIUM uses `transmissionResolutionScale` 0.6.
+  - LOW: transparent glass without a transmission pass.
+  - All tiers: an additive fresnel rim.
+- **Water:**
+  - Water body: an opaque shader stretched in the vertex shader to the fill level, so it stays visible through the transmission.
+  - Surface: impact ripples.
+  - Stream: tapers physically (r ∝ v^-½) and is discarded below the surface.
+- **Particles:** instanced bubbles and splash droplets.
+- **Lighting:** procedural PMREM environment (dark-blue sphere plus softbox panels) for the chrome and glass reflections.
+
+**State:**
+
+- The fill level is a pure function of `progress`. Progress is scrubbed by a ScrollTrigger on the `.svc-row`, from "top 80%" to "bottom 30%", with no tween.
+- Ambient time only drives surface shimmer, stream wobble, and bubble/splash motion.
+- Reduced motion shows the full, static state.
+
+**Performance, coordination and QA:**
+
+- Render coordinator id `supply-faucet`. Since §38.10 it uses the shared `useCardRenderSlot` hook, so its priority is 2.5 to 2.9 by visible ratio.
+- QA override: `?faucet3d=off|low|medium|high`.
+
+**Measured** (headless SwiftShader, instrumented WebGL):
+
+| Tier | Draw calls per frame | Triangles per frame | Notes |
+| --- | --- | --- | --- |
+| HIGH | 22 | 24 k | Includes the transmission pass |
+| LOW | ≈ 13 | 12 k | Idle = 0 frames |
+
+- LOW reverse-scroll frames are pixel-identical.
+- Lazy scene chunk: 8.8 KB gz.
+- `/` initial JS: +0.7 KB gz.
+
+### 38.10 Related: Services "02 Ариутгах татуурга" Sewer Cutaway 3D (IMPLEMENTED, same branch)
+
+*Added 2026-09-30.* The flat `SewerArt` SVG has been replaced by `components/three/sewer/SewerVisual3D.tsx`. The only change to `Services.tsx` is its `arts` map entry (and the import). `SewerArt` is kept as the fallback.
+
+**Scene** (procedural; no textures, no GLB, no new dependencies). It is a cutaway earth block. The cut plane (`FACE_Z`) runs along the road centreline, and every pipe and shaft is centred on that plane, so their front halves are removed.
+
+- **Above ground:**
+  - 3 generic houses of different sizes, one with a street-facing gable, all with warm windows;
+  - road with a centre line and edge line;
+  - curb, paver sidewalk, lawn with walkways;
+  - 2 street lights with light pools;
+  - 4 trees.
+- **Underground layers:** asphalt, gravel base, compacted fill, soil, clay. Pipe bedding is shown only where a pipe has been revealed.
+- **Household connections:** 3 inspection chambers (half boxes with an iron cover) with the lateral inlet on the back wall, then a vertical connection down to the main.
+- **Main sewer:** Ø0.28 with bell joints.
+- **Maintenance manhole:**
+  - concrete rings, cone and neck;
+  - step-iron ladder;
+  - drop from the main into the benching channel;
+  - half-cut cover.
+- **Collector:** larger (Ø0.4). It runs from the manhole channel and protrudes from the block's right face as a half-cut stub, showing the dark exterior and the section.
+- **Soil front face:** a single shader draws the layers, the concrete and pipe-wall rims, and the wastewater section. It uses `discard` for the open interiors, and the interior geometry behind it is revealed with the same `along` values.
+
+**Semantics:** wastewater is dark teal-green. There is no clean-water blue and no red.
+
+**State:** `layout.ts` `sewerState(p)` is a pure function.
+
+| Progress | What is shown |
+| --- | --- |
+| 0 | Dark bare block |
+| 0.10–0.30 | Surface sweep; houses, trees and lamps rise; windows and lamps light up |
+| 0.30–0.50 | Chambers and vertical connections draw downward |
+| 0.50–0.70 | Main pipe (left to right), manhole (top to bottom), collector |
+| 0.70–0.92 | Flow fronts: houses → main → drop → collector |
+| 0.90–1.00 | Full-system glow and maintenance ring |
+
+- Progress is scrubbed from the `.svc-img` position, "top 85%" to "center 40%". The full system is therefore reached while the card is fully visible.
+- Ambient time (HIGH/MEDIUM only) drives only streak motion, shimmer and window/lamp "breathing".
+
+**Performance and coordination:**
+
+- Draw calls: 9 on HIGH (8 on LOW, which has no glow).
+- About 2.4 k triangles.
+- Lazy chunk: 13.8 KB gz.
+- `/` initial JS: +1.1 KB gz, for the wrapper and the hook.
+- LOW idle renders 0 frames, and reverse-scroll frames are pixel-identical.
+- QA override: `?sewer3d=off|low|medium|high`.
+
+**Shared changes made with this task:**
+
+- **`components/three/useCardRenderSlot.ts`:** service cards arm and load at 250 px, render on demand while near, and get the continuous (ambient) slot by visible-ratio priority, `RENDER_PRIORITY.serviceCard` 2.5 to 2.9. This means two visible cards never freeze each other.
+- **Both service canvases use `resize={{ offsetSize: true, scroll: false }}`:** without it, R3F measured the canvas including the card's CSS zoom/hover scale and kept that wrong size after the animation.
+
+### 38.11 Related: Services "03 Цэвэрлэх байгууламж" Treatment Facility 3D (IMPLEMENTED, same branch)
+
+*Added 2026-09-30.* The flat `TreatmentArt` SVG has been replaced by `components/three/treatment/TreatmentVisual3D.tsx`. The only change to `Services.tsx` is its `arts` map entry (and the imports). `TreatmentArt` is kept as the fallback.
+
+**Scene** (procedural; no textures, no GLB, no new dependencies). It is a miniature on a concrete plinth, and it keeps the SVG composition. SVG px map to world units as `(x − 250) / 98`, `(y − 170) / 98`.
+
+- **Left tank:** large circular concrete tank of wastewater.
+  - Outer and inner walls, rim, rim railing, ladder.
+  - Central pivot with drive head and platform, plus a feed well.
+  - Rotating bridge scraper: grating deck, handrails, a half-submerged blade, and a rim carriage with a motor and a cyan "running" LED.
+- **Right tank:** smaller, slightly further back, for the later stage. Same mechanics, plus a peripheral overflow weir.
+- **Connecting channel:** short open concrete channel on a pier, with a slide gate and a grating footbridge with railing.
+- **Outlet:** effluent chamber, then a pipe forward, a 90° bend, and a run to the right. The pipe has flanges, saddles and a valve (body, stem, handwheel), and ends at a headwall on the river bank.
+- **River:** an arc that cuts the front-right corner. It is a hole in the ground shader with a notch in the side faces, and a water section.
+- **Grounds:**
+  - control building from the SVG, with a roof parapet, rooftop unit and lit windows;
+  - service road, tank aprons and paths;
+  - grass patches and the SVG bushes;
+  - 3 service lights and an electrical cabinet.
+
+**Semantics:**
+
+| Element | Colour |
+| --- | --- |
+| Raw sewage | Murky olive |
+| Treated wastewater | Teal-green |
+| Cleaned water | Blue/cyan |
+| Concrete | Cool grey |
+| Service lights | Soft white |
+
+**State:** `layout.ts` `treatmentState(p)` is a pure function.
+
+| Progress | What is shown |
+| --- | --- |
+| 0 | Dark plinth (tank footprints only) |
+| 0.10–0.30 | Tanks, pivots, building, channel, outlet and arms rise; lights on |
+| 0.30–0.44 | Left tank fills with raw water |
+| 0.36–0.50 | Left tank activates (teal-green, swirl, arm wake) |
+| 0.50–0.62 | Channel flow front |
+| 0.56–0.74 | Right tank fills |
+| 0.70–0.88 | Right tank cleans (teal → blue, concentric ripples, weir highlight) |
+| 0.84–0.95 | Outlet pipe cyan pulse front |
+| 0.94–0.98 | Outfall cascade and river rings |
+| 0.90–1.00 | Running LEDs |
+
+- Progress is scrubbed from `.svc-img`, "top 85%" to "center 40%".
+- The arm angle is `base + p·0.9 + t·ω`, with ω between 0.05 and 0.068 rad/s. The progress term is deterministic; `t` (ambient, HIGH/MEDIUM only) also drives only the water shimmer/ripple phase and light "breathing".
+
+**Performance:**
+
+- Draw calls: 7 on HIGH (6 on LOW, which has no glow).
+- About 12.6 k triangles.
+- The two bridges rotate in the vertex shader (`aSpin`), so there are no extra meshes.
+- Lazy chunk: 15.1 KB gz.
+- `/` initial JS: +0.2 KB gz.
+- LOW idle renders 0 frames, and reverse-scroll frames are pixel-identical.
+- QA override: `?treatment3d=off|low|medium|high`.
+- It uses the shared `useCardRenderSlot` hook (id `services-treatment`) and `resize={{ offsetSize: true, scroll: false }}`.

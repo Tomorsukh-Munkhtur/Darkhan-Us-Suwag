@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { ambientPhase, stageProgress, type JourneyRuntime } from "../runtime";
@@ -35,9 +35,16 @@ export const particleCount = (base: number, tier: TierSettings) => Math.max(1, M
 /**
  * Үе шатын үндэс: progress-ийн эхний 40%-д хавтан доороос өргөгдөн томорно.
  * Буцаахад (p → 0) урвуугаар живж алга болно. p ≈ 0 эсвэл идэвхгүй үед бүхэлдээ нуугдана (draw call 0).
+ * rt.roots-д бүртгүүлнэ → олон view-тэй үед ViewRenderer view бүрт зөвхөн тухайн үе шатыг харуулна.
  */
 export function RevealRoot({ rt, index, children }: SceneProps & { children: ReactNode }) {
   const ref = useRef<THREE.Group>(null);
+  useEffect(() => {
+    rt.roots[index] = ref.current;
+    return () => {
+      if (rt.roots[index] === ref.current) rt.roots[index] = null;
+    };
+  }, [rt, index]);
   useFrame(() => {
     const g = ref.current;
     if (!g) return;

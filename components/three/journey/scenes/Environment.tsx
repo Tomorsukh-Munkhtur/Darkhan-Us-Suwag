@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { JourneyRuntime } from "../runtime";
@@ -30,16 +30,24 @@ export function Lights() {
   );
 }
 
-/** Үе шат бүрт ижил тавцан: техникийн цагираг + зөөлөн гэрэл; өндөр нь идэвхтэй хавтангийн ёроол (LOW-д шугамгүй) */
+/**
+ * Үе шат бүрт ижил тавцан: техникийн цагираг + зөөлөн гэрэл (LOW-д шугамгүй).
+ * Өндрийг view бүрт ViewRenderer тухайн хавтангийн ёроолд тааруулна (rt.floor).
+ */
 export function StageFloor({ rt }: { rt: JourneyRuntime }) {
   const mat = useDisposable(createFloorMaterial, []);
   const ref = useRef<THREE.Mesh>(null);
+  useEffect(() => {
+    rt.floor = ref.current;
+    return () => {
+      if (rt.floor === ref.current) rt.floor = null;
+    };
+  }, [rt]);
   useFrame(() => {
-    ref.current!.position.y = STAGES[rt.stage].floorY;
     mat.uniforms.uLines.value = TIERS[rt.tier].fx ? 1 : 0;
   });
   return (
-    <mesh ref={ref} rotation-x={-Math.PI / 2} position-y={STAGES[rt.stage].floorY} material={mat} renderOrder={-1}>
+    <mesh ref={ref} rotation-x={-Math.PI / 2} position-y={STAGES[0].floorY} material={mat} renderOrder={-1}>
       <circleGeometry args={[4.8, 96]} />
     </mesh>
   );

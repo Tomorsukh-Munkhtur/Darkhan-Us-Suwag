@@ -1,12 +1,7 @@
-"use client";
-
-import { useEffect, useMemo, useRef } from "react";
-import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import { ambientOn, stageProgress, type JourneyRuntime } from "./runtime";
 import { STAGES, type CameraPreset } from "./stages";
 
-const { damp, degToRad } = THREE.MathUtils;
+const { degToRad } = THREE.MathUtils;
 /** Фрэймийн ирмэгээс үлдээх зай (1 = яг ирмэгт) */
 const MARGIN = 0.9;
 
@@ -41,79 +36,33 @@ export function fitDistance(preset: CameraPreset, fovDeg: number, aspect: number
   return { distance: d, center };
 }
 
+const fits = new Map<string, { distance: number; center: THREE.Vector3 }>();
+const dir = new THREE.Vector3();
+
 /**
- * Камерын цорын ганц бичигч. Байрлал нь (stage, progress, aspect)-ийн цэвэр функц:
- * scroll-той холбоотой бага зэргийн тойрох (±4°) ба доош суух (3°), бага зэрэг ойртох (5%).
- * Damping, цаг ашиглахгүй — progress-ийг буцаахад камер яг урвуу явна.
- * Хулганы parallax (±3°) нь зөвхөн ambient асаалттай, нарийн заагчтай үед нэмэгдэх чимэглэл.
+ * Камерын цорын ганц бичигч (view бүрт ViewRenderer дуудна). Байрлал нь (stage, progress, aspect)-ийн цэвэр функц:
+ * scroll-той холбоотой бага зэргийн тойрох (±4°), доош суух (3°), бага зэрэг ойртох (5%).
+ * Damping, цаг ашиглахгүй — progress-ийг буцаахад камер яг урвуу явна. Roll, FOV өөрчлөлт үгүй.
+ * extraAz/extraEl — зөвхөн ambient үеийн чимэглэл (±1–3°), bounds-ийн MARGIN дотор багтана.
  */
-export default function JourneyCamera({ rt }: { rt: JourneyRuntime }) {
-  const gl = useThree((s) => s.gl);
-  const fit = useRef({ stage: -1, aspect: 0, distance: 0, center: new THREE.Vector3() });
-  const dir = useMemo(() => new THREE.Vector3(), []);
-  const pointer = useRef({ x: 0, y: 0, tx: 0, ty: 0, fine: false });
-
-  useEffect(() => {
-    pointer.current.fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-    if (!pointer.current.fine) return;
-    const el = gl.domElement;
-    const onMove = (e: PointerEvent) => {
-      const r = el.getBoundingClientRect();
-      pointer.current.tx = ((e.clientX - r.left) / r.width) * 2 - 1;
-      pointer.current.ty = ((e.clientY - r.top) / r.height) * 2 - 1;
-    };
-    const onLeave = () => {
-      pointer.current.tx = 0;
-      pointer.current.ty = 0;
-    };
-    el.addEventListener("pointermove", onMove);
-    el.addEventListener("pointerleave", onLeave);
-    return () => {
-      el.removeEventListener("pointermove", onMove);
-      el.removeEventListener("pointerleave", onLeave);
-    };
-  }, [gl]);
-
-  useFrame((state, delta) => {
-    const cam = state.camera as THREE.PerspectiveCamera;
-    const preset = STAGES[rt.stage].camera;
-    const aspect = state.size.width / Math.max(state.size.height, 1);
-
-    // зай: үе шат эсвэл харьцаа өөрчлөгдсөн үед л дахин тооцно
-    const f = fit.current;
-    if (f.stage !== rt.stage || Math.abs(f.aspect - aspect) > 1e-3) {
-      const r = fitDistance(preset, cam.fov, aspect);
-      f.stage = rt.stage;
-      f.aspect = aspect;
-      f.distance = r.distance;
-      f.center.copy(r.center);
-    }
-
-    const p = stageProgress(rt, rt.stage);
-    let az = preset.azimuth + (p - 0.5) * 8;
-    let el = preset.elevation + (1 - p) * 3;
-    const dist = f.distance * (1 + (1 - p) * 0.05);
-
-    // чимэглэл: хулганы parallax (scene-ийн төлөвийн нэг хэсэг биш)
-    const ptr = pointer.current;
-    if (ambientOn(rt) && ptr.fine) {
-      const dt = Math.min(delta, 1 / 20);
-      ptr.x = damp(ptr.x, ptr.tx, 2.5, dt);
-      ptr.y = damp(ptr.y, ptr.ty, 2.5, dt);
-      az += ptr.x * 3;
-      el += ptr.y * 1.8;
-    } else {
-      ptr.x = 0;
-      ptr.y = 0;
-    }
-
-    direction(az, el, dir);
-    cam.position.copy(f.center).addScaledVector(dir, dist);
-    cam.lookAt(f.center);
-    // Матрицыг одоо шинэчилнэ: renderer render хийхдээ л шинэчилдэг тул үгүй бол LabelProjector
-    // (энэ кадрт, render-ээс өмнө) өмнөх кадрын камераар проекцлоно → demand горимд шошго нэг алхам хоцорно.
-    cam.updateMatrixWorld();
-  });
-
-  return null;
+export function poseCamera(cam: THREE.PerspectiveCamera, stage: number, p: number, aspect: number, extraAz = 0, extraEl = 0) {
+  const preset = STAGES[stage].camera;
+  const key = `${stage}:${aspect.toFixed(3)}:${cam.fov}`;
+  let f = fits.get(key);
+  if (!f) {
+    f = fitDistance(preset, cam.fov, aspect);
+    if (fits.size > 64) fits.delete(fits.keys().next().value!);
+    fits.set(key, f);
+  }
+  if (cam.aspect !== aspect) {
+    cam.aspect = aspect;
+    cam.updateProjectionMatrix();
+  }
+  const az = preset.azimuth + (p - 0.5) * 8 + extraAz;
+  const el = preset.elevation + (1 - p) * 3 + extraEl;
+  direction(az, el, dir);
+  cam.position.copy(f.center).addScaledVector(dir, f.distance * (1 + (1 - p) * 0.05));
+  cam.lookAt(f.center);
+  // Матрицыг одоо шинэчилнэ: шошгыг render-ээс өмнө энэ камераар проекцлоно (нэг кадр хоцрохгүй)
+  cam.updateMatrixWorld();
 }

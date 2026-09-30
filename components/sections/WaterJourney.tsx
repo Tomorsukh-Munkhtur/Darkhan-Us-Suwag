@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { journey } from "@/lib/content";
+import { RENDER_PRIORITY, useRenderSlot } from "@/components/three/renderCoordinator";
+import JourneyStage3D from "@/components/three/journey/JourneyStage3D";
+import { createJourneyDriver } from "@/components/three/journey/runtime";
+import { detectTier, readTierSignals, type QualityTier } from "@/components/three/journey/quality";
+import { hasWebGL2 } from "@/components/three/journey/utils/browser";
+import { computeJourneyViews, measureJourneyBand, type JourneyBand } from "@/components/three/journey/stageLayout";
 import SectionHeading from "../ui/SectionHeading";
 import DripDots from "./journey/DripDots";
 import {
@@ -33,6 +39,14 @@ const visuals: Record<string, React.FC> = {
 const pad = (n: number) => String(n).padStart(2, "0");
 const N = journey.length;
 
+/** ?journey3d=off|low|medium|high — QA ба статик (SVG) горим; бусад үед төхөөрөмжөөс тодорхойлно */
+function journeyMode(): QualityTier | "off" {
+  const q = new URLSearchParams(window.location.search).get("journey3d");
+  if (q === "off") return "off";
+  if (q === "high" || q === "medium" || q === "low") return q.toUpperCase() as QualityTier;
+  return detectTier(readTierSignals());
+}
+
 /**
  * Усны аялал — хэвтээ аялал: самбар дэлгэц дээр тогтож (sticky), доош scroll хийхэд 6 шатны карт
  * нэг эгнээгээр зүүн тийш гулсана (бид баруун тийш аялна). Картуудын дээгүүр усны хоолой гүйж,
@@ -54,21 +68,38 @@ export default function WaterJourney() {
   const tlTarget = useRef<number[]>([]);
   const [active, setActive] = useState(0);
   const activeRef = useRef(0);
-  // арын усны гадаргуу: зөвхөн хэсэг дэлгэцэн дээр байхад л зурна
-  const [surface, setSurface] = useState<{ reduced: boolean } | null>(null);
+  // арын усны гадаргуу: зөвхөн хэсэг дэлгэцэн дээр байхад, render зохицуулагч зөвшөөрвөл зурна (LOW-д mount хийхгүй)
+  const [surface, setSurface] = useState<{ reduced: boolean; mount: boolean } | null>(null);
   const [inView, setInView] = useState(false);
+  const surfaceAllowed = useRenderSlot("water-surface", RENDER_PRIORITY.waterSurface, inView && !!surface?.mount);
+
+  // 3D: НЭГ хуваалцсан canvas; харагдаж буй карт бүрийн зургийн хэсэгт тухайн үе шатыг зурна.
+  // Хуучин SVG нь зөвхөн fallback (ачаалж байхад, WebGL байхгүй, алдаа, ?journey3d=off).
+  const [driver] = useState(() => createJourneyDriver());
+  const [mode, setMode] = useState<QualityTier | "off" | null>(null);
+  const [threeReady, setThreeReady] = useState(false);
+  const threeLive = useRef(false);
+  const band = useRef<HTMLDivElement | null>(null);
+  const bandLayout = useRef<JourneyBand | null>(null);
+  const slots = useRef<(HTMLDivElement | null)[]>([]);
+  // эхний карт: хэсэг рүү орж ирэх scroll-ын явц (0 → 1)
+  const entry = useRef(0);
 
   useEffect(() => {
-    setSurface({ reduced: window.matchMedia("(prefers-reduced-motion: reduce)").matches });
+    const m = journeyMode();
+    setMode(m);
+    // WebGL2 байхгүй бол WaterSurface үүсгэхгүй (R3F алдаа хуудсыг унагахаас сэргийлнэ)
+    setSurface({ reduced: window.matchMedia("(prefers-reduced-motion: reduce)").matches, mount: m !== "LOW" && hasWebGL2() });
     const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting));
     io.observe(root.current!);
     return () => io.disconnect();
   }, []);
 
-  // Картын зураг: карт баруунаас орж ирэх үеэс эхэлж, голд ирэхэд анимац нь дуусна
+  // Картын зураг: карт баруунаас орж ирэх үеэс эхэлж, голд ирэхэд анимац нь дуусна.
+  // 3D ажиллаж байхад SVG нуугдсан тул tween хийхгүй; fallback болоход бүгдийг дахин тааруулна.
   const driveVisual = (i: number) => {
     const tl = tls.current[i];
-    if (!tl) return;
+    if (!tl || threeLive.current) return;
     const target = gsap.utils.clamp(0, 1, pos.current - (i - 1));
     if (Math.abs(target - (tlTarget.current[i] ?? -1)) < 0.002) return;
     tlTarget.current[i] = target;
@@ -89,6 +120,16 @@ export default function WaterJourney() {
     [],
   );
 
+  const onThreeReady = useCallback((ready: boolean) => {
+    threeLive.current = ready;
+    setThreeReady(ready);
+    if (!ready) {
+      tlTarget.current = tlTarget.current.map(() => -1);
+      for (let k = 0; k < N; k++) driveVisual(k);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     // Хэмжээ: эхний картын төвөөс сүүлийн картын төв хүртэлх зай = хэвтээ аялал.
     // Босоо scroll-ын урт нь үүнтэй тэнцүү, гэхдээ шат бүрт дор хаяж 0.8 дэлгэц ногдоно (утсан дээр хэт хурдан биш)
@@ -107,6 +148,18 @@ export default function WaterJourney() {
       pipe.current!.style.left = `${c0}px`;
       pipe.current!.style.width = `${dist.current}px`;
       pipe.current!.style.top = `${r.top - rowTop + r.height / 2}px`;
+      // 3D canvas зурвас: картын зургийн хэсгийн өндөр × stage-ийн өргөн
+      bandLayout.current = measureJourneyBand(row.current!, first, slots.current[0]!);
+      if (band.current) {
+        band.current.style.top = `${bandLayout.current.top}px`;
+        band.current.style.height = `${bandLayout.current.height}px`;
+      }
+    };
+
+    // Харагдаж буй карт бүрийн 3D view (байрлал, opacity, progress) — картын transform бичсэний дараа
+    const syncViews = () => {
+      if (!band.current || !bandLayout.current) return;
+      driver.setViews(computeJourneyViews(pos.current, entry.current, band.current, cards.current, slots.current, bandLayout.current));
     };
 
     const update = (p: number) => {
@@ -127,6 +180,7 @@ export default function WaterJourney() {
         setActive(i);
       }
       for (let k = 0; k < N; k++) driveVisual(k);
+      syncViews();
     };
 
     measure();
@@ -136,6 +190,18 @@ export default function WaterJourney() {
       end: "bottom bottom",
       onUpdate: (self) => update(self.progress),
       onRefresh: (self) => update(self.progress),
+    });
+    // Эхний карт хэсэг рүү орж ирэх scroll-оор босно (аялал эхлэхэд 1)
+    const onEntry = (self: ScrollTrigger) => {
+      entry.current = self.progress;
+      syncViews();
+    };
+    const entrySt = ScrollTrigger.create({
+      trigger: track.current,
+      start: "top bottom",
+      end: "top top",
+      onUpdate: onEntry,
+      onRefresh: onEntry,
     });
     const refresh = () => {
       measure();
@@ -179,6 +245,7 @@ export default function WaterJourney() {
       clearTimeout(t);
       window.removeEventListener("resize", onResize);
       st.kill();
+      entrySt.kill();
       mm.revert();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -186,10 +253,16 @@ export default function WaterJourney() {
 
   return (
     // motion-safe:-mt-[100svh]: Hero-ийн шумбах замын ард байрлана (Hero.tsx)
-    <section id="journey" ref={root} className="relative bg-foam pt-24 [clip-path:inset(0)] motion-safe:-mt-[100svh] sm:pt-32">
-      {/* арын бүдэг усны гадаргуу (Hero-гийн усны бүдэг хувилбар): caustic тор, давалгаа, хулганы долгио */}
+    <section
+      id="journey"
+      ref={root}
+      data-journey-3d={threeReady ? "on" : undefined}
+      className="relative bg-foam pt-24 [clip-path:inset(0)] motion-safe:-mt-[100svh] sm:pt-32"
+    >
+      {/* арын бүдэг усны гадаргуу (Hero-гийн усны бүдэг хувилбар): caustic тор, давалгаа, хулганы долгио.
+          3D ажиллаж байхад зохицуулагч зогсооно → demand горимоор нэг кадр зураад хөлдөнө */}
       <div aria-hidden className="water-pattern">
-        {surface && <WaterSurface running={inView} reduced={surface.reduced} />}
+        {surface?.mount && <WaterSurface running={surfaceAllowed} reduced={surface.reduced || !surfaceAllowed} />}
       </div>
       <svg aria-hidden className="absolute h-0 w-0">
         <filter id="journey-water">
@@ -261,7 +334,12 @@ export default function WaterJourney() {
 
                   {/* --vis: зургийн баганын өргөн = картын өндрийн доод хязгаар, тэгэхээр дөрвөлжин SVG хоосон зурвасгүй дүүрнэ */}
                   <div className="glass grid flex-1 grid-rows-[auto_1fr] overflow-hidden rounded-3xl border-water/30! [--vis:min(400px,50svh)] lg:grid-cols-[var(--vis)_1fr] lg:grid-rows-[1fr]">
-                    <div className="journey-visual relative h-[clamp(7.5rem,20svh,13rem)] overflow-hidden border-b border-abyss/10 lg:h-auto lg:min-h-(--vis) lg:border-b-0 lg:border-r [&>svg]:absolute [&>svg]:inset-0">
+                    <div
+                      ref={(el) => {
+                        slots.current[i] = el;
+                      }}
+                      className="journey-visual relative h-[clamp(7.5rem,20svh,13rem)] overflow-hidden border-b border-abyss/10 lg:h-auto lg:min-h-(--vis) lg:border-b-0 lg:border-r [&>svg]:absolute [&>svg]:inset-0"
+                    >
                       <ScrubDriver.Provider value={drivers[i]}>
                         <Visual />
                       </ScrubDriver.Provider>
@@ -288,6 +366,9 @@ export default function WaterJourney() {
               );
             })}
           </div>
+
+          {/* НЭГ 3D canvas: харагдаж буй картуудын зүүн (зургийн) хэсэгт; layout-аас гадуур (absolute) */}
+          <JourneyStage3D driver={driver} tier={mode} onReadyChange={onThreeReady} bandRef={band} />
 
           <p
             ref={hint}

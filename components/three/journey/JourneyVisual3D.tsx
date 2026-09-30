@@ -1,11 +1,12 @@
 "use client";
 
-import { Component, memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { RENDER_PRIORITY, useRenderSlot } from "../renderCoordinator";
 import type { JourneyDriver, JourneyStats } from "./runtime";
 import { detectTier, readTierSignals, TIERS, type QualityTier } from "./quality";
 import { hasWebGL2, usePrefersReducedMotion } from "./utils/browser";
+import SceneBoundary from "./SceneBoundary";
 
 // three.js + R3F нь зөвхөн клиент дээр, хэрэгтэй үед л ачаалагдана
 const JourneyScene3D = dynamic(() => import("./JourneyScene3D"), { ssr: false, loading: () => null });
@@ -133,17 +134,3 @@ function JourneyVisual3D({
 }
 
 export default memo(JourneyVisual3D);
-
-/** three/R3F-ийн алдаа хуудсыг унагахгүй — fallback руу буцна */
-class SceneBoundary extends Component<{ onError: () => void; children: ReactNode }, { failed: boolean }> {
-  state = { failed: false };
-  static getDerivedStateFromError() {
-    return { failed: true };
-  }
-  componentDidCatch() {
-    this.props.onError();
-  }
-  render() {
-    return this.state.failed ? null : this.props.children;
-  }
-}

@@ -5,14 +5,17 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { services } from "@/lib/content";
 import SectionHeading from "../ui/SectionHeading";
-import { SupplyArt, SewerArt, TreatmentArt } from "./services/Illustrations";
+import SupplyVisual3D from "@/components/three/faucet/SupplyVisual3D";
+import SewerVisual3D from "@/components/three/sewer/SewerVisual3D";
+import TreatmentVisual3D from "@/components/three/treatment/TreatmentVisual3D";
 
 gsap.registerPlugin(ScrollTrigger);
 
 const arts: Record<string, React.FC<{ className?: string }>> = {
-  supply: SupplyArt,
-  sewer: SewerArt,
-  treatment: TreatmentArt,
+  // цорго → шилэн аяга, газар доорх татуургын огтлол, цэвэрлэх байгууламж: 3D (SVG нь зөвхөн fallback)
+  supply: SupplyVisual3D,
+  sewer: SewerVisual3D,
+  treatment: TreatmentVisual3D,
 };
 
 function Drop() {

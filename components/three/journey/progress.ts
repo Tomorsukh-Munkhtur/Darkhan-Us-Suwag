@@ -43,3 +43,13 @@ export function svgScrubTarget(pos: number, index: number) {
 export function overlayOpacity(pos: number, index: number) {
   return 1 - smoothstep(FADE_START, FADE_END, Math.abs(pos - index));
 }
+
+/**
+ * Production 3D-ийн progress (WaterJourney-ийн одоогийн SVG scrub-тай ижил логик):
+ * карт баруунаас ойртож эхлэхэд (pos = i − 1) 0, төвд ирэхэд (pos = i) 1; буцааж гүйлгэхэд урвуу.
+ * Эхний карт: хэсэг рүү орж ирэх scroll-оор (entry 0 → 1) босно, аялал эхэлсний дараа 1 хэвээр.
+ */
+export function journeyProgress(pos: number, index: number, entry: number) {
+  if (index === 0) return pos > 0 ? 1 : clamp01(entry);
+  return clamp01(pos - (index - 1));
+}
