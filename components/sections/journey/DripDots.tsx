@@ -4,16 +4,15 @@ import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 
 /** Цэг хоорондын зай (px) */
-const GAP = 34;
+const GAP = 40;
 
 /**
- * Усны аяллын хуудаслалт: шат солигдоход идэвхтэй цэгээс дусал сунаж тасраад дараагийн цэг рүү унана,
- * унасан газарт долгион тарж цэг дүүрнэ. Буцахад бөмбөлөг найгасаар дээш хөөрнө.
+ * Усны аяллын хэвтээ хуудаслалт: шат солигдоход идэвхтэй цэгээс дусал нуман замаар дараагийн цэг рүү
+ * үсэрч, буусан газарт долгион тарж цэг дүүрнэ.
  */
 export default function DripDots({ items, active }: { items: { id: string; label: string }[]; active: number }) {
   const box = useRef<HTMLDivElement>(null);
-  const drop = useRef<SVGSVGElement>(null);
-  const bubble = useRef<HTMLSpanElement>(null);
+  const drop = useRef<HTMLSpanElement>(null);
   const fills = useRef<(HTMLSpanElement | null)[]>([]);
   const prev = useRef(active);
 
@@ -26,21 +25,21 @@ export default function DripDots({ items, active }: { items: { id: string; label
     const to = active;
     prev.current = to;
     if (from === to) return;
-    const fromFill = fills.current[from];
     const toFill = fills.current[to];
-    gsap.killTweensOf([drop.current, bubble.current]);
+    gsap.killTweensOf(drop.current);
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       gsap.set(fills.current, { scale: 0 });
       gsap.set(toFill, { scale: 1 });
       return;
     }
 
-    // унасан/хөөрсөн газарт долгион тарж, цэг уян хатан дүүрнэ
+    // буусан газарт долгион тарж, цэг уян хатан дүүрнэ
     const land = () => {
       gsap.fromTo(toFill, { scale: 0 }, { scale: 1, duration: 0.7, ease: "elastic.out(1, 0.45)", overwrite: true });
       const ring = document.createElement("span");
       ring.className = "drip-ripple";
-      ring.style.top = `${to * GAP + 8}px`;
+      ring.style.left = `${to * GAP + 8}px`;
+      ring.style.top = "8px";
       box.current!.append(ring);
       ring.animate(
         [
@@ -51,43 +50,33 @@ export default function DripDots({ items, active }: { items: { id: string; label
       ).onfinish = () => ring.remove();
     };
 
-    gsap.set(fills.current.filter((f, i) => i !== from && i !== to), { scale: 0 });
-    gsap.to(fromFill, { scale: 0, duration: 0.3, ease: "power2.in", overwrite: true });
-    const y0 = from * GAP;
-    const y1 = to * GAP;
+    gsap.set(fills.current.filter((_, i) => i !== from && i !== to), { scale: 0 });
+    gsap.to(fills.current[from], { scale: 0, duration: 0.25, ease: "power2.in", overwrite: true });
+    // дусал: нуман замаар үсэрнэ, нисэхдээ хөдлөх чиглэлдээ сунана
     const dist = Math.abs(to - from);
-    if (to > from) {
-      // дусал: доош сунаж тасраад таталцлаар унана
-      gsap
-        .timeline()
-        .set(drop.current, { y: y0, opacity: 1, scaleX: 1, scaleY: 0.4, transformOrigin: "50% 0%" })
-        .to(drop.current, { scaleY: 1.5, scaleX: 0.75, duration: 0.2, ease: "power2.in" })
-        .to(drop.current, { y: y1 - 10, scaleY: 1.2, scaleX: 0.85, duration: 0.2 + 0.06 * dist, ease: "power2.in" })
-        .set(drop.current, { opacity: 0 })
-        .add(land);
-    } else {
-      // бөмбөлөг: найгасаар дээш хөөрнө
-      gsap
-        .timeline()
-        .set(bubble.current, { y: y0, x: 0, opacity: 1, scale: 0.4 })
-        .to(bubble.current, { y: y1, scale: 1, duration: 0.4 + 0.08 * dist, ease: "sine.inOut" })
-        .to(bubble.current, { x: 3, duration: 0.1, yoyo: true, repeat: 3, ease: "sine.inOut" }, "<")
-        .set(bubble.current, { opacity: 0 })
-        .add(land);
-    }
+    const dur = 0.42 + 0.08 * dist;
+    gsap
+      .timeline()
+      .set(drop.current, { x: from * GAP, y: 0, opacity: 1, scaleX: 1, scaleY: 1 })
+      .to(drop.current, { x: to * GAP, duration: dur, ease: "power1.inOut" }, 0)
+      .to(drop.current, { y: -18 - 4 * dist, duration: dur / 2, ease: "sine.out" }, 0)
+      .to(drop.current, { y: 0, duration: dur / 2, ease: "sine.in" }, dur / 2)
+      .to(drop.current, { scaleX: 1.5, scaleY: 0.8, duration: dur / 2, ease: "sine.inOut", yoyo: true, repeat: 1 }, 0)
+      .set(drop.current, { opacity: 0 })
+      .add(land);
   }, [active]);
 
   return (
-    <nav aria-label="Усны аяллын шатууд" className="absolute right-4 top-1/2 z-20 hidden -translate-y-1/2 md:block lg:right-8">
-      <div ref={box} className="relative w-4" style={{ height: (items.length - 1) * GAP + 16 }}>
+    <nav aria-label="Усны аяллын шатууд" className="drip-nav absolute bottom-[4.5rem] left-1/2 z-20 -translate-x-1/2 sm:bottom-8">
+      <div ref={box} className="relative h-4" style={{ width: (items.length - 1) * GAP + 16 }}>
         {items.map((s, i) => (
           <a
             key={s.id}
             href={`#stage-${s.id}`}
             aria-label={s.label}
             aria-current={i === active ? "step" : undefined}
-            className="drip-dot group absolute left-0 h-4 w-4"
-            style={{ top: i * GAP }}
+            className="drip-dot group absolute top-0 h-4 w-4"
+            style={{ left: i * GAP }}
           >
             <span className="drip-dot__ring" />
             <span
@@ -96,22 +85,12 @@ export default function DripDots({ items, active }: { items: { id: string; label
               }}
               className="drip-dot__fill"
             />
-            <span className="pointer-events-none absolute right-7 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-abyss/10 bg-white/90 px-3 py-1 font-display text-[10px] tracking-[0.2em] text-abyss opacity-0 shadow-md backdrop-blur transition group-hover:opacity-100">
+            <span className="pointer-events-none absolute bottom-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-abyss/10 bg-white/90 px-3 py-1 font-display text-[10px] tracking-[0.2em] text-abyss opacity-0 shadow-md backdrop-blur transition group-hover:opacity-100">
               {s.label}
             </span>
           </a>
         ))}
-        <svg ref={drop} viewBox="0 0 12 16" className="drip-drop" aria-hidden>
-          <path d="M6 0C6 0 0 7.5 0 10.5a6 6 0 0012 0C12 7.5 6 0 6 0Z" fill="url(#drip-g)" />
-          <defs>
-            <radialGradient id="drip-g" cx=".35" cy=".6" r=".7">
-              <stop offset="0" stopColor="#fff" />
-              <stop offset=".45" stopColor="#5fd3f7" />
-              <stop offset="1" stopColor="#1f8fd0" />
-            </radialGradient>
-          </defs>
-        </svg>
-        <span ref={bubble} className="drip-bubble" aria-hidden />
+        <span ref={drop} className="drip-hop" aria-hidden />
       </div>
     </nav>
   );
