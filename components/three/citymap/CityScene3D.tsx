@@ -10,9 +10,10 @@ import { useDisposable } from "../journey/utils/useDisposable";
 import { computeNetwork, DISTRICTS, PIPES, riverAt, svgToWorld, type P2 } from "./layout";
 import { cameraPose, cityState, createCityState, stageCoord, type CameraPose } from "./state";
 import { riverGeometry, roadGeometry, roadLayout, sidewalkGeometry, streetLightSpots, terrainGeometry } from "./world";
-import { generateBuildings, generateTrees, type Building, type Tree } from "./city";
+import { generateBuildings, generateCars, generateTrees, type Building, type Car, type Tree } from "./city";
 import { facilityGeometry, KEY } from "./facilities";
-import { pipeGeometry, pipeJoints } from "./pipes";
+import { pipeGeometry, pipeJoints, pipeSaddles } from "./pipes";
+import { buildingCasters, pipeCasters, shadowMesh, treeCasters } from "./shadows";
 import {
   buildingMaterial,
   createCityUniforms,
@@ -26,7 +27,9 @@ import {
   pipeMaterial,
   poleMaterial,
   poolMaterial,
+  propMaterial,
   riverMaterial,
+  shadowMaterial,
   roadMaterial,
   sidewalkMaterial,
   spriteMaterial,
@@ -121,6 +124,7 @@ function buildingMesh(list: Building[], mat: THREE.Material) {
   const seed = new Float32Array(n);
   const kind = new Float32Array(n);
   const dist = new Float32Array(n);
+  const shop = new Float32Array(n);
   const mesh = instanced(geo, mat, n);
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();
@@ -128,16 +132,66 @@ function buildingMesh(list: Building[], mat: THREE.Material) {
   const s = new THREE.Vector3();
   list.forEach((b, i) => {
     q.setFromAxisAngle(Y_AXIS, b.rot ? Math.PI / 2 : 0);
-    mesh.setMatrixAt(i, m.compose(p.set(b.x, 0, b.z), q, s.set(b.w, b.h, b.d)));
+    mesh.setMatrixAt(i, m.compose(p.set(b.x, b.y ?? 0, b.z), q, s.set(b.w, b.h, b.d)));
     size.set([b.w, b.h, b.d], i * 3);
     seed[i] = b.seed;
     kind[i] = b.kind;
     dist[i] = b.dist;
+    shop[i] = b.shop ? 1 : 0;
   });
   geo.setAttribute("aSize", new THREE.InstancedBufferAttribute(size, 3));
   geo.setAttribute("aSeed", new THREE.InstancedBufferAttribute(seed, 1));
   geo.setAttribute("aKind", new THREE.InstancedBufferAttribute(kind, 1));
   geo.setAttribute("aDist", new THREE.InstancedBufferAttribute(dist, 1));
+  geo.setAttribute("aShop", new THREE.InstancedBufferAttribute(shop, 1));
+  return mesh;
+}
+
+/** Машин: их бие + бүхээг (нэгж орон зай: x урт −0.5..0.5, y 0..1, z өргөн) */
+function carMesh(list: Car[], mat: THREE.Material) {
+  const parts = [new THREE.BoxGeometry(1, 0.55, 1).translate(0, 0.275, 0), new THREE.BoxGeometry(0.52, 0.45, 0.84).translate(-0.05, 0.775, 0)].map((g) => {
+    const o = g.toNonIndexed();
+    g.dispose();
+    o.deleteAttribute("uv");
+    return o;
+  });
+  const geo = mergeGeometries(parts, false)!;
+  parts.forEach((g) => g.dispose());
+  const n = list.length;
+  const mesh = instanced(geo, mat, n);
+  const type = new Float32Array(Math.max(n, 1));
+  const tint = new Float32Array(Math.max(n, 1));
+  const m = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  const p = new THREE.Vector3();
+  const s = new THREE.Vector3(0.03, 0.012, 0.0135);
+  list.forEach((c, i) => {
+    q.setFromAxisAngle(Y_AXIS, c.rot);
+    mesh.setMatrixAt(i, m.compose(p.set(c.x, 0.006, c.z), q, s));
+    type[i] = c.moving ? 2 : 1;
+    tint[i] = c.tint;
+  });
+  geo.setAttribute("aType", new THREE.InstancedBufferAttribute(type, 1));
+  geo.setAttribute("aTint", new THREE.InstancedBufferAttribute(tint, 1));
+  return mesh;
+}
+
+/** Хоолойн бетон тулгуур (instanced хайрцаг) */
+function saddleMesh(list: ReturnType<typeof pipeSaddles>, mat: THREE.Material) {
+  const geo = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
+  geo.deleteAttribute("uv");
+  const n = list.length;
+  const mesh = instanced(geo, mat, n);
+  const m = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  const p = new THREE.Vector3();
+  const s = new THREE.Vector3();
+  list.forEach((d, i) => {
+    q.setFromAxisAngle(Y_AXIS, d.rot);
+    mesh.setMatrixAt(i, m.compose(p.set(d.x, 0, d.z), q, s.set(0.014, d.h, d.r * 2.4)));
+  });
+  geo.setAttribute("aType", new THREE.InstancedBufferAttribute(new Float32Array(Math.max(n, 1)), 1));
+  geo.setAttribute("aTint", new THREE.InstancedBufferAttribute(new Float32Array(Math.max(n, 1)), 1));
   return mesh;
 }
 
@@ -212,10 +266,12 @@ function Stage({
   // --- өгөгдөл (детерминистик)
   const net = useMemo(() => computeNetwork(PIPES), []);
   const layout = useMemo(() => roadLayout(), []);
-  const buildings = useMemo(() => generateBuildings(net), [net]);
+  const buildings = useMemo(() => generateBuildings(net, layout), [net, layout]);
   const trees = useMemo(() => generateTrees(layout, buildings, density), [layout, buildings, density]);
   const lights = useMemo(() => streetLightSpots(layout, cfg.lightStep), [layout, cfg.lightStep]);
   const joints = useMemo(() => pipeJoints(net), [net]);
+  const cars = useMemo(() => generateCars(layout, Math.min(1, density * 1.1)), [layout, density]);
+  const saddles = useMemo(() => pipeSaddles(), []);
 
   // --- материал
   const U = useMemo(createCityUniforms, []);
@@ -244,6 +300,8 @@ function Stage({
   const poleMat = useDisposable(() => poleMaterial(U), [U]);
   const lampMat = useDisposable(() => spriteMaterial(U, "#ffd9a0", 0.85), [U]);
   const poolMat = useDisposable(poolMaterial, []);
+  const shadowMat = useDisposable(() => shadowMaterial(U), [U]);
+  const propMat = useDisposable(() => propMaterial(U), [U]);
 
   // --- geometry
   const terrainGeo = useDisposable(() => terrainGeometry(cfg.terrain[0], cfg.terrain[1]), [cfg.terrain]);
@@ -265,6 +323,12 @@ function Stage({
 
   // --- instanced
   const bldMesh = useMemo(() => buildingMesh(buildings, bldMat), [buildings, bldMat]);
+  const carsMesh = useMemo(() => carMesh(cars, propMat), [cars, propMat]);
+  const saddlesMesh = useMemo(() => saddleMesh(saddles, propMat), [saddles, propMat]);
+  const shadows = useMemo(
+    () => shadowMesh([...buildingCasters(buildings), ...treeCasters(trees), ...fac.shadows, ...pipeCasters()], shadowMat),
+    [buildings, trees, fac, shadowMat],
+  );
   const roundTrees = useMemo(() => treeMesh(trees, false, treeMat), [trees, treeMat]);
   const conifers = useMemo(() => treeMesh(trees, true, treeMat), [trees, treeMat]);
   const jointMesh = useMemo(() => {
@@ -322,12 +386,12 @@ function Stage({
   }, [lights, poleMat, lampMat, poolMat, cfg.fx]);
   useEffect(
     () => () => {
-      for (const mesh of [bldMesh, roundTrees, conifers, jointMesh, poles, lamps, pools]) {
+      for (const mesh of [bldMesh, roundTrees, conifers, jointMesh, poles, lamps, pools, carsMesh, saddlesMesh, shadows]) {
         mesh.geometry.dispose();
         mesh.dispose();
       }
     },
-    [bldMesh, roundTrees, conifers, jointMesh, poles, lamps, pools],
+    [bldMesh, roundTrees, conifers, jointMesh, poles, lamps, pools, carsMesh, saddlesMesh, shadows],
   );
 
   // --- DOM шошго (lazy chunk дотор үүсгэнэ — эхний bundle-д layout өгөгдөл орохгүй)
@@ -451,6 +515,9 @@ function Stage({
       <primitive object={roundTrees} />
       <primitive object={conifers} />
       <primitive object={poles} />
+      <primitive object={carsMesh} />
+      <primitive object={saddlesMesh} />
+      <primitive object={shadows} renderOrder={2} />
       <mesh geometry={fac.body} material={facMat} />
       <mesh geometry={fac.lights} material={facLightMat} />
       <mesh geometry={fac.water} material={facWaterMat} />

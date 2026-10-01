@@ -16,6 +16,8 @@ const smooth = (v: number, a: number, b: number) => {
   const t = seg(v, a, b);
   return t * t * (3 - 2 * t);
 };
+/** Камерын шилжилт: эхлэл/төгсгөлдөө илүү зөөлөн (smootherstep) */
+const smoother = (t: number) => t * t * t * (t * (t * 6 - 15) + 10);
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 /** Алхам бүрт хүрээд камер (ба онцлох бүс) барина; дараагийн алхам руу шилжилт нь алхмын сүүлийн 38%-д */
@@ -23,7 +25,7 @@ const HOLD = 0.62;
 export function stageBlend(v: number) {
   const a = Math.min(Math.floor(v), 5);
   const f = v - a;
-  const t = a >= 5 ? 0 : smooth(f, HOLD, 1);
+  const t = a >= 5 ? 0 : smoother(seg(f, HOLD, 1));
   return { a, b: Math.min(a + 1, 5), t };
 }
 
@@ -146,6 +148,11 @@ export function cameraPose(v: number, mobile: boolean, out: CameraPose): CameraP
   out.ground = Math.exp(lerp(Math.log(A.ground), Math.log(B.ground), t)) * (mobile ? 1.18 : 1);
   out.az = lerp(A.az, B.az, t);
   out.el = lerp(A.el, B.el, t);
+  // дроны нум: хол зайн шилжилтэд дунд хэсэгт дээш гарч, илүү өргөн харагдаад дараагийн обьект руу буух
+  const travel = Math.hypot(B.target[0] - A.target[0], B.target[1] - A.target[1]);
+  const arc = Math.sin(Math.PI * t) * Math.min(1, travel / 5);
+  out.ground *= 1 + 0.3 * arc;
+  out.el += 6 * arc;
   const f = lerp(fa, fb, t);
   out.offX = off[0] * f;
   out.offY = off[1] * f;

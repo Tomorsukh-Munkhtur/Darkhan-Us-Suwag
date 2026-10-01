@@ -16,16 +16,31 @@ import {
   type District,
   type Network,
 } from "./layout";
-import { roadClearance, type RoadLayout } from "./world";
+import { clipToCore, roadClearance, type RoadLayout } from "./world";
 
 /**
  * Барилга (instanced) ба модны байрлалын генератор. Детерминистик (seeded) — SSR/клиент, түвшин бүрт ижил дараалал;
  * density нь зөвхөн тоог багасгана.
  */
 export const FLOOR_H = 0.024;
-/** 0 — хуучин панель байр, 1 — шинэ олон давхар, 2 — үйлдвэр, 3 — нийтийн (сургууль, цэцэрлэг) */
-export type BuildingKind = 0 | 1 | 2 | 3;
-export type Building = { x: number; z: number; w: number; d: number; h: number; rot: boolean; kind: BuildingKind; seed: number; dist: number; district: number };
+/** 0 — хуучин панель байр, 1 — шинэ олон давхар, 2 — үйлдвэр, 3 — нийтийн (сургууль, цэцэрлэг), 4 — дээврийн төхөөрөмж */
+export type BuildingKind = 0 | 1 | 2 | 3 | 4;
+export type Building = {
+  x: number;
+  z: number;
+  w: number;
+  d: number;
+  h: number;
+  rot: boolean;
+  kind: BuildingKind;
+  seed: number;
+  dist: number;
+  district: number;
+  /** суурийн өндөр (дээврийн төхөөрөмж — эх барилгын дээвэр) */
+  y?: number;
+  /** өргөн чөлөөний дагуух доод давхрын дэлгүүр */
+  shop?: boolean;
+};
 export type Rect = { x0: number; x1: number; z0: number; z1: number };
 
 const SIDEWALK = 0.034;
@@ -56,7 +71,7 @@ const footprint = (b: Building): Rect => {
   return { x0: b.x - hx, x1: b.x + hx, z0: b.z - hz, z1: b.z + hz };
 };
 
-export function generateBuildings(net: Network) {
+export function generateBuildings(net: Network, layout: RoadLayout) {
   const out: Building[] = [];
   const rnd = seeded(20251);
   const r = (a: number, b: number) => a + (b - a) * rnd();
@@ -139,6 +154,73 @@ export function generateBuildings(net: Network) {
     }
   });
   for (const b of out) b.dist = nearestCleanD(net.cleanNodes, b.x, b.z);
+  // өргөн чөлөөний дагуух орон сууцны доод давхарт дэлгүүр
+  const avenues = layout.pieces.filter((p) => p.major);
+  for (const b of out) {
+    if (b.kind > 1) continue;
+    b.shop = avenues.some((p) => {
+      const along = p.horizontal ? b.x : b.z;
+      const across = p.horizontal ? b.z : b.x;
+      return along > p.a - 0.05 && along < p.b + 0.05 && Math.abs(across - p.c) < p.w / 2 + 0.2;
+    });
+  }
+  // дээврийн төхөөрөмж: лифтний машин өрөө, агааржуулалт (үйлдвэрт — дээврийн гэрэлтүүлэгч, сэнс)
+  const rr = seeded(4242);
+  const roofs: Building[] = [];
+  for (const b of out) {
+    const n = b.kind === 1 ? 2 + Math.round(rr()) : b.kind === 2 ? 2 + Math.round(rr() * 2) : 1 + Math.round(rr() * 0.7);
+    for (let k = 0; k < n; k++) {
+      const w = b.kind === 2 ? 0.03 + rr() * 0.04 : 0.022 + rr() * 0.016;
+      const d = b.kind === 2 ? 0.02 + rr() * 0.02 : 0.016 + rr() * 0.014;
+      const la = (rr() - 0.5) * Math.max(b.w - w - 0.04, 0);
+      const lc = (rr() - 0.5) * Math.max(b.d - d - 0.03, 0);
+      const x = b.x + (b.rot ? lc : la);
+      const z = b.z + (b.rot ? -la : lc);
+      roofs.push({ x, z, y: b.h, w, d, h: b.kind === 2 ? 0.008 + rr() * 0.006 : 0.011 + rr() * 0.01, rot: b.rot, kind: 4, seed: rr(), dist: b.dist, district: b.district });
+    }
+  }
+  return [...out, ...roofs];
+}
+
+// ---------------------------------------------------------------------------------------------
+// Машин: гудамжинд зогсоол, өргөн чөлөөнд явж буй (баруун гар талын хөдөлгөөн, урд/хойд гэрэлтэй). Статик байрлал.
+
+export type Car = { x: number; z: number; rot: number; moving: boolean; tint: number };
+
+export function generateCars(layout: RoadLayout, density: number) {
+  const rnd = seeded(5150);
+  const out: Car[] = [];
+  for (const p of layout.pieces) {
+    const span = clipToCore(p);
+    if (!span) continue;
+    const [a, b] = [span[0] + (p.ja ? 0.07 : 0.02), span[1] - (p.jb ? 0.07 : 0.02)];
+    if (b - a < 0.05) continue;
+    const put = (t: number, off: number, dir: number, moving: boolean) => {
+      if (rnd() > density) return;
+      const x = p.horizontal ? t : p.c + off;
+      const z = p.horizontal ? p.c + off : t;
+      // орон нутгийн +x урагш: хэвтээ зам — ±x, босоо — ±z
+      const rot = p.horizontal ? (dir > 0 ? 0 : Math.PI) : dir > 0 ? -Math.PI / 2 : Math.PI / 2;
+      out.push({ x, z, rot, moving, tint: rnd() });
+    };
+    // хорооллын гудамж (зогсоолтой) / хорооллоос гадуурх зам (цөөн, зөвхөн явж буй)
+    const mid = (a + b) / 2;
+    const [mx, mz] = p.horizontal ? [mid, p.c] : [p.c, mid];
+    const urban = DISTRICTS.some((d) => mx > d.xs[0] - 0.05 && mx < d.xs[d.xs.length - 1] + 0.05 && mz > d.ys[0] - 0.05 && mz < d.ys[d.ys.length - 1] + 0.05);
+    if (p.major) {
+      const pMove = urban ? 0.34 : 0.16;
+      for (const lane of [-0.054, -0.02, 0.02, 0.054]) {
+        const dir = p.horizontal ? (lane > 0 ? 1 : -1) : lane > 0 ? -1 : 1;
+        for (let t = a + rnd() * 0.1; t < b; t += 0.08 + rnd() * 0.18) if (rnd() < pMove) put(t, lane, dir, true);
+      }
+    } else {
+      for (const side of [-1, 1]) {
+        if (urban) for (let t = a; t < b; t += 0.034) if (rnd() < 0.36) put(t + rnd() * 0.004, side * (p.w / 2 - 0.013), rnd() < 0.5 ? 1 : -1, false);
+        const dir = p.horizontal ? side : -side;
+        for (let t = a + rnd() * 0.2; t < b; t += 0.2 + rnd() * 0.3) if (rnd() < (urban ? 0.35 : 0.1)) put(t, side * 0.018, dir, true);
+      }
+    }
+  }
   return out;
 }
 

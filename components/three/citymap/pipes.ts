@@ -123,3 +123,24 @@ export function pipeJoints(net: Network) {
   });
   return out;
 }
+
+/** Хоолойн бетон тулгуур (saddle): ~0.3 тутамд, булан/холбооноос зайтай — хоолой газраас "хөвөхгүй" */
+export function pipeSaddles() {
+  const out: { x: number; z: number; rot: number; h: number; r: number }[] = [];
+  for (const p of PIPES) {
+    if (p.kind === "outfall") continue;
+    const top = (p.trunk ? PIPE_Y + 0.008 : PIPE_Y) - p.r * 0.4;
+    for (let k = 0; k < p.pts.length - 1; k++) {
+      const [ax, az] = p.pts[k];
+      const [bx, bz] = p.pts[k + 1];
+      const L = Math.hypot(bx - ax, bz - az);
+      if (L < 0.2) continue;
+      const n = Math.floor((L - 0.12) / 0.3);
+      for (let i = 0; i <= n; i++) {
+        const t = (0.06 + ((L - 0.12) * (i + 0.5)) / (n + 1)) / L;
+        out.push({ x: ax + (bx - ax) * t, z: az + (bz - az) * t, rot: Math.atan2(-(bz - az), bx - ax), h: top, r: p.r });
+      }
+    }
+  }
+  return out;
+}

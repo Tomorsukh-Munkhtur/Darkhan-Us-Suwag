@@ -168,6 +168,7 @@ export const ROADS: Road[] = (() => {
   add([1610, 560], [1610, 190]);
   add([1610, 190], [1470, 190]); // цэвэрлэх байгууламжийн орц
   add([720, 560], [720, 885]);
+  add([720, 330], [720, -40], true); // хойд зам — Хараа голын гүүрээр
   return roads;
 })();
 
@@ -197,6 +198,18 @@ export const PLANT = {
   inlet: toW(1480, 232),
   outfall: [toW(1400, 205), toW(1400, 160)] as [P2, P2],
 } as const;
+
+/** Хараа голын гүүр (хойд зам x = 720 px) */
+export const BRIDGE = (() => {
+  const x = (720 - 800) / 100;
+  return { x, z: riverAt(x).z, half: 0.52, width: 0.2 };
+})();
+
+/** Замын гадаргуугийн өндөр: хотод тэгш, хотоос гадна газрыг дагана, гол дээр гүүрний тавцан (y ≈ 0) */
+export function roadY(x: number, z: number) {
+  const inCore = x > CORE.x0 && x < CORE.x1 && z > CORE.z0 && z < CORE.z1;
+  return inCore ? 0.006 : Math.max(terrainHeight(x, z), 0) + 0.014;
+}
 
 /** Засвар (lib/content outages[0].mapPoint-ийг scene хүлээн авна) */
 export const svgToWorld = toW;

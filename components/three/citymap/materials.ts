@@ -54,8 +54,8 @@ const COMMON = /* glsl */ `
   uniform float uFogStart;
   uniform float uFogDensity;
   const vec3 KEY_DIR = ${dirGlsl(-0.5, 0.8, 0.38)};
-  const vec3 KEY_COL = ${v3("#c8d8ee", 0.95)};
-  const vec3 SKY = ${v3("#6f8fb8", 1.0)};
+  const vec3 KEY_COL = ${v3("#d2def0", 1.08)};
+  const vec3 SKY = ${v3("#6a88b0", 0.88)};
   const vec3 GROUND = ${v3("#222d3a", 1.0)};
   vec3 shade(vec3 alb, vec3 n) {
     float k = max(dot(n, KEY_DIR), 0.0);
@@ -240,7 +240,14 @@ export function riverMaterial(U: CityUniforms) {
         float glint = smoothstep(0.78, 0.97, n1 * 0.45 + n2 * 0.55);
         col += W_HI * glint * (0.22 + 0.12 * uEmph[0]);
         col += W_HI * smoothstep(0.72, 0.96, n2) * 0.05;
-        col += W_HI * (1.0 - smoothstep(0.0, 0.018, abs(across - 0.265))) * 0.14;
+        // эргийн нимгэн хөөс, гүехэн ирмэг
+        float shore = 1.0 - smoothstep(0.0, 0.028, abs(across - 0.258));
+        col += W_HI * shore * (0.1 + 0.12 * n2);
+        // сарны мөр: хойноос туссан гэрлийн долгионт тусгал
+        vec3 nw = normalize(vec3((n1 - 0.5) * 0.16, 1.0, (n2 - 0.5) * 0.16));
+        vec3 rr = reflect(-v, nw);
+        float moon = pow(max(dot(rr, ${dirGlsl(0.12, 0.42, -0.9)}), 0.0), 36.0);
+        col += ${v3("#cfe2ff")} * moon * 0.4;
         gl_FragColor = vec4(applyFog(col, vW), 1.0);
         ${COLORSPACE}
       }
@@ -354,6 +361,7 @@ export function buildingMaterial(U: CityUniforms) {
       attribute float aSeed;
       attribute float aKind;
       attribute float aDist;
+      attribute float aShop;
       varying vec3 vW;
       varying vec3 vN;
       varying vec3 vL;
@@ -362,6 +370,7 @@ export function buildingMaterial(U: CityUniforms) {
       varying float vSeed;
       varying float vKind;
       varying float vDist;
+      varying float vShop;
       void main() {
         vec4 w = modelMatrix * instanceMatrix * vec4(position, 1.0);
         vW = w.xyz;
@@ -372,6 +381,7 @@ export function buildingMaterial(U: CityUniforms) {
         vSeed = aSeed;
         vKind = aKind;
         vDist = aDist;
+        vShop = aShop;
         gl_Position = projectionMatrix * viewMatrix * w;
       }
     `,
@@ -388,6 +398,7 @@ export function buildingMaterial(U: CityUniforms) {
       varying float vSeed;
       varying float vKind;
       varying float vDist;
+      varying float vShop;
       ${NOISE}
       ${COMMON}
       const float FLOOR_H = ${f(FLOOR_H)};
@@ -408,17 +419,21 @@ export function buildingMaterial(U: CityUniforms) {
         float emph = mix(0.52, 1.0, uEmph[3]);
         vec3 col;
         vec3 glow = vec3(0.0);
-        if (vLN.y > 0.5) {
-          // дээвэр: хашлагын ирмэг, дээврийн төхөөрөмж
+        if (kind > 3.5) {
+          // дээврийн төхөөрөмж (лифтний өрөө, агааржуулалт): энгийн саарал, дээд тал цайвар
+          col = mix(${v3("#5d666f")}, ${v3("#707a83")}, vSeed) * (vLN.y > 0.5 ? 1.12 : 1.0);
+          col = shade(col, n) * emph;
+        } else if (vLN.y > 0.5) {
+          // дээвэр: битум/хайрган хучилт (өнгөний хувилбар), хашлагын ирмэг, ус зайлуулах заадас
           vec2 p = vL.xz * vSize.xz;
           vec2 e = vSize.xz * 0.5 - abs(p);
           float edge = 1.0 - smoothstep(0.004, 0.008, min(e.x, e.y));
-          vec2 cell = floor(p / 0.05 + vSeed * 13.0);
-          float unit = step(0.86, hash21(cell)) * (1.0 - edge);
-          col = C_ROOF * (0.9 + 0.12 * vnoise(p * 40.0 + vSeed * 9.0));
-          col = mix(col, ${v3("#4a525a")}, edge * 0.8);
-          col = mix(col, ${v3("#3c444c")}, unit);
+          vec3 roof = mix(mix(C_ROOF, ${v3("#454c53")}, step(0.45, vSeed)), ${v3("#3b4752")}, step(0.8, vSeed));
+          col = roof * (0.88 + 0.1 * vnoise(p * 40.0 + vSeed * 9.0) + 0.06 * hash21(floor(p * 260.0)));
+          col *= 0.94 + 0.06 * step(0.04, abs(fract(p.x * 9.0 + vSeed) - 0.5));
+          col = mix(col, ${v3("#59626a")}, edge * 0.85);
           col = shade(col, n) * emph;
+          col += ${v3("#8fb0c8", 0.08)} * edge;
         } else {
           bool sx = abs(vLN.x) > 0.5;
           float len = sx ? vSize.z : vSize.x;
@@ -439,6 +454,12 @@ export function buildingMaterial(U: CityUniforms) {
           float win = step(0.2, fr.x) * step(fr.x, 0.8) * step(0.28, fr.y) * step(fr.y, 0.76);
           win *= step(0.012, len * 0.5 - abs(u)) * step(y, vSize.y - 0.01) * step(0.004, y);
           if (kind > 1.5 && kind < 2.5) win *= step(0.6, hash21(id * 1.3 + vSeed)) * step(id.y, 1.5);
+          // тагт: урт фасадын зарим баганад давхар бүрийн доод хэсэгт цайвар хашлага (доод давхраас бусад)
+          float balcony = 0.0;
+          if (kind < 1.5 && len > 0.2 && id.y > 0.5) {
+            balcony = step(hash21(vec2(id.x * 1.7 + face, vSeed * 13.0)), 0.36) * step(0.04, fr.y) * step(fr.y, 0.24) * step(0.12, fr.x) * step(fr.x, 0.88);
+            balcony *= step(y, vSize.y - 0.012);
+          }
           float h = hash21(id + vec2(vSeed * 37.0, face * 11.0));
           // ус хүрсэн дарааллаар асах долгион (6-р алхам), түүнээс өмнө бүрэнхийн сийрэг гэрэл
           float wave = smoothstep(vDist - 0.5, vDist, uWindows);
@@ -448,6 +469,22 @@ export function buildingMaterial(U: CityUniforms) {
           vec3 glass = C_GLASS + ${v3("#1e3550")} * (0.3 + 0.7 * fr.y) * 0.5;
           col = shade(col, n) * emph;
           col = mix(col, mix(glass, warm * mix(0.75, 1.15, wave), on), win);
+          col = mix(col, shade(${v3("#c4c9cd")}, n) * emph, balcony * 0.85);
+          // орц: доод давхарт хааяа хаалга + дээрх дулаан гэрэл
+          if (kind < 1.5 && id.y < 0.5 && len > 0.2) {
+            float door = step(hash21(vec2(id.x * 3.1 + face * 7.0, vSeed * 5.0)), 0.09) * step(0.25, fr.x) * step(fr.x, 0.75) * step(y, 0.016);
+            col = mix(col, ${v3("#20272e")}, door);
+            glow += C_WARM * door * 0.18 + C_WARM * step(hash21(vec2(id.x * 3.1 + face * 7.0, vSeed * 5.0)), 0.09) * (1.0 - smoothstep(0.0, 0.003, abs(y - 0.019))) * step(0.3, fr.x) * step(fr.x, 0.7) * 0.9;
+          }
+          // өргөн чөлөөний дагуух дэлгүүр: доод давхрын өргөн шилэн нүүр + гэрэлт хаяг
+          if (vShop > 0.5 && y < FLOOR_H) {
+            float shopWin = step(0.06, fr.x) * step(fr.x, 0.94) * step(0.003, y) * step(y, 0.017) * step(0.012, len * 0.5 - abs(u));
+            vec3 shopCol = mix(${v3("#ffd9a0")}, ${v3("#fff1d6")}, hash21(id + 9.0)) * 0.95;
+            col = mix(col, shopCol, shopWin);
+            float sign = step(0.0185, y) * step(y, 0.0215) * step(0.1, fr.x) * step(fr.x, 0.9) * step(0.5, hash21(vec2(id.x, vSeed)));
+            vec3 signCol = mix(mix(${v3("#7fe0ff")}, ${v3("#ffffff")}, step(0.5, hash21(id + 4.0))), ${v3("#ffb36b")}, step(0.8, hash21(id + 2.0)));
+            col = mix(col, signCol * 0.9, sign);
+          }
           // ус хүрсэн: суурийн cyan зурвас (4-р алхмаас)
           float supplied = smoothstep(vDist - 0.12, vDist, uClean);
           glow += C_CYAN * supplied * (1.0 - smoothstep(0.0, 0.018, y)) * 0.45 * (1.0 - 0.6 * wave);
@@ -596,6 +633,7 @@ export function pipeMaterial(U: CityUniforms) {
         vec3 dark = shade(off * 1.6, n);
         vec3 glow = on * (0.42 + 0.48 * pow(facing, 1.4)) + hi * (st.y * 0.45 + st.z * 0.75);
         // онцлох алхам: цэвэр ус — хот (4-р алхам), бохир ус — цэвэрлэх байгууламж (5-р алхам)
+        if (vKind > 0.5 && vKind < 1.5) glow = on * (0.14 + 0.85 * pow(facing, 3.0)) + hi * (st.y * 0.35 + st.z * 0.6) * pow(facing, 1.5);
         glow *= mix(0.55, 1.0, vKind < 0.5 ? uEmph[3] : uEmph[4]);
         vec3 col = mix(dark, glow, st.x);
         float rep = repairMask(vW.xz) * step(vKind, 0.5);
@@ -1040,5 +1078,149 @@ export function poolMaterial() {
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Хуурамч сүүдэр (instanced quad): дүрсийг гэрлийн эсрэг чиглэлд шилжүүлж (6 дээж) зөөлөн ирмэгтэй харанхуйлна
+
+export function shadowMaterial(U: CityUniforms) {
+  return new THREE.ShaderMaterial({
+    uniforms: { uFogStart: U.uFogStart, uFogDensity: U.uFogDensity },
+    vertexShader: /* glsl */ `
+      attribute vec4 aShape;
+      attribute vec4 aParam;
+      attribute float aK;
+      varying vec2 vP;
+      varying vec3 vW;
+      varying vec4 vShape;
+      varying vec4 vParam;
+      varying float vK;
+      void main() {
+        vec4 w = modelMatrix * instanceMatrix * vec4(position, 1.0);
+        vP = w.xz;
+        vW = w.xyz;
+        vShape = aShape;
+        vParam = aParam;
+        vK = aK;
+        gl_Position = projectionMatrix * viewMatrix * w;
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform float uFogStart;
+      uniform float uFogDensity;
+      varying vec2 vP;
+      varying vec3 vW;
+      varying vec4 vShape;
+      varying vec4 vParam;
+      varying float vK;
+      float sdBox(vec2 p, vec2 b) {
+        vec2 d = abs(p) - b;
+        return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+      }
+      float shapeD(vec2 p) {
+        if (vParam.x < 0.5) {
+          vec2 q = p - vShape.xy;
+          float c = cos(vParam.y);
+          float s = sin(vParam.y);
+          return sdBox(vec2(c * q.x - s * q.y, s * q.x + c * q.y), vShape.zw);
+        }
+        if (vParam.x < 1.5) return length(p - vShape.xy) - vShape.z;
+        vec2 pa = p - vShape.xy;
+        vec2 ba = vShape.zw - vShape.xy;
+        float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0.0, 1.0);
+        return length(pa - ba * h) - vParam.y;
+      }
+      void main() {
+        vec2 sw = vParam.zw;
+        float a;
+        if (vParam.x > 1.5) {
+          // хөвөгч хоолой: зөвхөн шилжсэн нарийн сүүдэр
+          float d = shapeD(vP - sw);
+          a = (1.0 - smoothstep(-0.003, 0.012, d)) * 0.3;
+        } else {
+          float d = 1e3;
+          for (int i = 0; i < 6; i++) d = min(d, shapeD(vP - sw * (float(i) / 5.0)));
+          float shade = 1.0 - smoothstep(-0.004, 0.018 + length(sw) * 0.12, d);
+          float ao = 1.0 - smoothstep(0.0, 0.035, shapeD(vP));
+          a = max(shade * 0.38, ao * 0.32);
+        }
+        a *= vK;
+        float dist = length(vW - cameraPosition);
+        a *= 1.0 - clamp(1.0 - exp(-pow(max(dist - uFogStart, 0.0) * uFogDensity, 2.0)), 0.0, 1.0);
+        gl_FragColor = vec4(0.0, 0.008, 0.02, a);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+  });
+}
+
+/**
+ * Жижиг instanced биет: машин (их бие + бүхээг; явж буй машинд урд цагаан, хойд улаан гэрэл) ба хоолойн бетон тулгуур.
+ * aType: 0 тулгуур, 1 зогсоолын машин, 2 явж буй машин. Статик байрлал — цаг ашиглахгүй.
+ */
+export function propMaterial(U: CityUniforms) {
+  return new THREE.ShaderMaterial({
+    uniforms: { uFogColor: U.uFogColor, uFogStart: U.uFogStart, uFogDensity: U.uFogDensity, uEmph: U.uEmph },
+    vertexShader: /* glsl */ `
+      attribute float aType;
+      attribute float aTint;
+      varying vec3 vW;
+      varying vec3 vN;
+      varying vec3 vL;
+      varying vec3 vLN;
+      varying float vType;
+      varying float vTint;
+      void main() {
+        vec4 w = modelMatrix * instanceMatrix * vec4(position, 1.0);
+        vW = w.xyz;
+        vN = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * normal);
+        vL = position;
+        vLN = normal;
+        vType = aType;
+        vTint = aTint;
+        gl_Position = projectionMatrix * viewMatrix * w;
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform float uEmph[${ZONES}];
+      varying vec3 vW;
+      varying vec3 vN;
+      varying vec3 vL;
+      varying vec3 vLN;
+      varying float vType;
+      varying float vTint;
+      ${COMMON}
+      vec3 carColor(float t) {
+        if (t < 0.24) return ${v3("#d6dade")};
+        if (t < 0.42) return ${v3("#9aa3ab")};
+        if (t < 0.6) return ${v3("#23272c")};
+        if (t < 0.7) return ${v3("#8a2f33")};
+        if (t < 0.82) return ${v3("#2f4f7a")};
+        if (t < 0.92) return ${v3("#b3a487")};
+        return ${v3("#3d5a49")};
+      }
+      void main() {
+        vec3 n = normalize(vN);
+        vec3 col;
+        if (vType < 0.5) {
+          col = shade(${v3("#7d868f")}, n);
+        } else {
+          col = carColor(vTint);
+          // бүхээгийн шил
+          float cabin = step(0.6, vL.y);
+          if (cabin > 0.5 && vLN.y < 0.5) col = mix(${v3("#14202c")}, ${v3("#3a5874")}, 0.35);
+          col = shade(col, n) + ${v3("#dce8f2")} * 0.12 * pow(max(dot(n, normalize(KEY_DIR + normalize(cameraPosition - vW))), 0.0), 24.0);
+          if (vType > 1.5 && vL.y < 0.55) {
+            col = mix(col, ${v3("#fff4dc")} * 1.25, step(0.5, vLN.x) * step(0.2, vL.y));
+            col = mix(col, ${v3("#ff3a3a")} * 0.9, step(vLN.x, -0.5) * step(0.25, vL.y));
+          }
+          col *= mix(0.65, 1.0, uEmph[3]);
+        }
+        gl_FragColor = vec4(applyFog(col, vW), 1.0);
+        ${COLORSPACE}
+      }
+    `,
   });
 }

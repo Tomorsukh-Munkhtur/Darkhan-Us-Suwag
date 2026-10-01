@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { RIVER, riverDist, ROADS, terrainHeight, type P2, type Road } from "./layout";
+import { CORE, RIVER, riverDist, ROADS, roadY, terrainHeight, type P2, type Road } from "./layout";
 
 /**
  * Газар, гол, замын geometry. Бүгд нэг материалд нэг geometry (draw call цөөн).
@@ -120,10 +120,9 @@ export function roadGeometry(layout: RoadLayout) {
   const road: number[] = [];
   const ends: number[] = [];
   const kind: number[] = [];
-  const Y = 0.006;
   const quad = (corners: number[][], attrs: number[][], e: number[][], k: number) => {
     for (const i of [0, 1, 2, 0, 2, 3]) {
-      pos.push(corners[i][0], Y, corners[i][1]);
+      pos.push(corners[i][0], roadY(corners[i][0], corners[i][1]), corners[i][1]);
       road.push(...attrs[i]);
       ends.push(...e[i]);
       kind.push(k);
@@ -133,57 +132,46 @@ export function roadGeometry(layout: RoadLayout) {
     const h = p.w / 2;
     const m = p.major ? 1 : 0;
     const len = p.b - p.a;
-    const ja = p.ja ? 0 : 99;
-    const jb = p.jb ? 0 : 99;
-    if (p.horizontal) {
-      quad(
-        [
-          [p.a, p.c - h],
-          [p.b, p.c - h],
-          [p.b, p.c + h],
-          [p.a, p.c + h],
-        ],
-        [
-          [p.a, -1, p.w, m],
-          [p.b, -1, p.w, m],
-          [p.b, 1, p.w, m],
-          [p.a, 1, p.w, m],
-        ],
-        [
-          [ja, jb + len],
-          [ja + len, jb],
-          [ja + len, jb],
-          [ja, jb + len],
-        ],
-        0,
-      );
-    } else {
-      quad(
-        [
-          [p.c + h, p.a],
-          [p.c + h, p.b],
-          [p.c - h, p.b],
-          [p.c - h, p.a],
-        ],
-        [
-          [p.a, -1, p.w, m],
-          [p.b, -1, p.w, m],
-          [p.b, 1, p.w, m],
-          [p.a, 1, p.w, m],
-        ],
-        [
-          [ja, jb + len],
-          [ja + len, jb],
-          [ja + len, jb],
-          [ja, jb + len],
-        ],
-        0,
-      );
+    // урт хэрчмийг хувааж газрын гадаргууг дагуулна (хотоос гадна толгод, гол дээр гүүр)
+    const n = Math.max(1, Math.ceil(len / 0.25));
+    const endA = (t: number) => (p.ja ? t - p.a : 99);
+    const endB = (t: number) => (p.jb ? p.b - t : 99);
+    for (let k = 0; k < n; k++) {
+      const t0 = p.a + (len * k) / n;
+      const t1 = p.a + (len * (k + 1)) / n;
+      const attrs = [
+        [t0, -1, p.w, m],
+        [t1, -1, p.w, m],
+        [t1, 1, p.w, m],
+        [t0, 1, p.w, m],
+      ];
+      const e = [
+        [endA(t0), endB(t0)],
+        [endA(t1), endB(t1)],
+        [endA(t1), endB(t1)],
+        [endA(t0), endB(t0)],
+      ];
+      const corners = p.horizontal
+        ? [
+            [t0, p.c - h],
+            [t1, p.c - h],
+            [t1, p.c + h],
+            [t0, p.c + h],
+          ]
+        : [
+            [p.c + h, t0],
+            [p.c + h, t1],
+            [p.c - h, t1],
+            [p.c - h, t0],
+          ];
+      quad(corners, attrs, e, 0);
     }
   }
   for (const c of layout.crossings) {
     const hx = c.wx / 2;
     const hz = c.wz / 2;
+    const zero = [0, 0, 0, 0];
+    const far = [99, 99];
     quad(
       [
         [c.x - hx, c.z - hz],
@@ -191,18 +179,8 @@ export function roadGeometry(layout: RoadLayout) {
         [c.x + hx, c.z + hz],
         [c.x - hx, c.z + hz],
       ],
-      [
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-      ],
-      [
-        [99, 99],
-        [99, 99],
-        [99, 99],
-        [99, 99],
-      ],
+      [zero, zero, zero, zero],
+      [far, far, far, far],
       1,
     );
   }
@@ -214,15 +192,25 @@ export function roadGeometry(layout: RoadLayout) {
   return g;
 }
 
+/** Хэрчмийг хотын хүрээнд тайрна (явган зам, гудамжны гэрэл зөвхөн хотод) */
+export function clipToCore(p: RoadPiece): [number, number] | null {
+  const [lo, hi, cLo, cHi] = p.horizontal ? [CORE.x0, CORE.x1, CORE.z0, CORE.z1] : [CORE.z0, CORE.z1, CORE.x0, CORE.x1];
+  if (p.c < cLo || p.c > cHi) return null;
+  const a = Math.max(p.a, lo);
+  const b = Math.min(p.b, hi);
+  return b - a > 0.04 ? [a, b] : null;
+}
+
 /** Явган зам + хашлага (замын хоёр талын бага зэрэг өндөр зурвас) — нэг geometry */
 export function sidewalkGeometry(layout: RoadLayout) {
   const parts: THREE.BufferGeometry[] = [];
   const SW = 0.034;
   const SH = 0.012;
   for (const p of layout.pieces) {
-    const len = p.b - p.a;
-    if (len < 0.04) continue;
-    const mid = (p.a + p.b) / 2;
+    const span = clipToCore(p);
+    if (!span) continue;
+    const len = span[1] - span[0];
+    const mid = (span[0] + span[1]) / 2;
     for (const s of [-1, 1]) {
       const off = s * (p.w / 2 + SW / 2);
       const g = p.horizontal
@@ -241,11 +229,13 @@ export function sidewalkGeometry(layout: RoadLayout) {
 export function streetLightSpots(layout: RoadLayout, step: number) {
   const out: { x: number; z: number; rot: number; road: P2 }[] = [];
   for (const p of layout.pieces) {
-    const len = p.b - p.a;
+    const span = clipToCore(p);
+    if (!span) continue;
+    const len = span[1] - span[0];
     if (len < 0.25) continue;
     const n = Math.max(1, Math.floor(len / step));
     for (let i = 0; i < n; i++) {
-      const t = p.a + ((i + 0.5) / n) * len;
+      const t = span[0] + ((i + 0.5) / n) * len;
       const side = (i + Math.round(p.c * 7)) % 2 === 0 ? 1 : -1;
       const off = side * (p.w / 2 + 0.03);
       if (p.horizontal) out.push({ x: t, z: p.c + off, rot: side > 0 ? Math.PI : 0, road: [t, p.c] });
