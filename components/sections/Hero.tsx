@@ -4,12 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { RENDER_PRIORITY, useRenderSlot } from "@/components/three/renderCoordinator";
+import { hasWebGL2 } from "@/components/three/journey/utils/browser";
 
 gsap.registerPlugin(ScrollTrigger);
 
 const HeroWater = dynamic(() => import("@/components/three/HeroWater"), { ssr: false });
 
-const words = ["ДАРХАН", "ХОТ"];
+/** Гарчгийн мөрүүд: утсан дээр мөр бүр тусдаа, desktop дээр бүгд нэг мөрөнд */
+const lines = [["ДАРХАН"], ["УС", "СУВАГ"]];
 
 /**
  * Давхаргууд: тунгалаг ус (WebGL) → УС БҮХНИЙ ЭХЛЭЛ.
@@ -18,7 +21,8 @@ const words = ["ДАРХАН", "ХОТ"];
  *
  * Шумбалт: Hero 200svh замд sticky тул нэг дэлгэцийн турш тогтож ус руу шумбана.
  * WaterJourney -100svh-ээр дээш татагдсан тул энэ хугацаанд Hero-ийн ард доороос гарч ирээд,
- * Hero бүдгэрэхэд усаар дамжин тодорно (WaterJourney.tsx). Hero л цайвар (.theme-light), бусад нь dark.
+ * Hero бүдгэрэхэд усаар дамжин тодорно (WaterJourney.tsx). Hero цайвар (.theme-light), усан доорх хэсэг dark,
+ * аяллын дусал томорч нээсэн (DropReveal.tsx) дараах хэсгүүд дахин цайвар.
  */
 export default function Hero() {
   const track = useRef<HTMLDivElement>(null);
@@ -29,9 +33,12 @@ export default function Hero() {
   const [ready, setReady] = useState(false);
   const [inView, setInView] = useState(true);
   const [dived, setDived] = useState(false);
+  // Render зохицуулагч: Hero хамгийн өндөр priority — шумбаж байх хооронд Journey 3D хүлээнэ
+  const heroAllowed = useRenderSlot("hero-water", RENDER_PRIORITY.heroWater, inView && !dived);
 
   useEffect(() => {
-    setWebgl({ reduced: window.matchMedia("(prefers-reduced-motion: reduce)").matches });
+    // WebGL2 байхгүй бол canvas үүсгэхгүй (үүсгэвэл R3F алдаа шидэж хуудсыг унагана) — HTML гарчиг хэвээр харагдана
+    if (hasWebGL2()) setWebgl({ reduced: window.matchMedia("(prefers-reduced-motion: reduce)").matches });
     // Дэлгэцээс гарвал WebGL-ийг зогсооно
     const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting));
     io.observe(root.current!);
@@ -88,11 +95,11 @@ export default function Hero() {
       >
         {webgl && (
           <div aria-hidden className={`pointer-events-none absolute inset-0 transition-opacity duration-[1200ms] ${ready ? "opacity-100" : "opacity-0"}`}>
-            <HeroWater title={title} dive={dive} reduced={webgl.reduced} running={inView && !dived} onReady={() => setReady(true)} />
+            <HeroWater title={title} dive={dive} reduced={webgl.reduced} running={heroAllowed} onReady={() => setReady(true)} />
           </div>
         )}
 
-        {/* УС БҮХНИЙ ЭХЛЭЛ / ДАРХАН ХОТ — WebGL үед гарчиг усан доор зурагдана */}
+        {/* УС БҮХНИЙ ЭХЛЭЛ / ДАРХАН УС СУВАГ — WebGL үед гарчиг усан доор зурагдана */}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-4 pb-[6svh] text-center">
           <div className="hero-p-title">
             <div className="hero-title hero-pre">
@@ -101,14 +108,19 @@ export default function Hero() {
               </p>
               <h1
                 ref={title}
-                aria-label="Дархан хот — Дархан Ус Суваг ОНӨААТҮГ"
-                className={`font-display text-[length:min(calc(var(--u)*6.8),15vw)] font-bold leading-[0.95] tracking-tight transition-opacity duration-700 lg:text-[length:calc(var(--u)*9.5)] ${ready ? "opacity-0" : ""}`}
+                aria-label="Дархан Ус Суваг ОНӨААТҮГ"
+                className={`font-display text-[length:min(calc(var(--u)*6.8),15vw)] font-bold leading-[0.95] tracking-tight transition-opacity duration-700 lg:text-[length:calc(var(--u)*7.4)] ${ready ? "opacity-0" : ""}`}
               >
-                {words.map((w) => (
-                  <span key={w} aria-hidden className="block overflow-hidden whitespace-nowrap pt-[0.06em] lg:mx-[0.2em] lg:inline-block">
-                    {Array.from(w).map((c, i) => (
-                      <span key={i} className="hero-char inline-block bg-gradient-to-b from-abyss to-deep bg-clip-text text-transparent">
-                        {c}
+                {lines.map((ws) => (
+                  <span key={ws.join(" ")} aria-hidden className="block whitespace-nowrap lg:inline">
+                    {ws.map((w) => (
+                      // үг бүр доороос гарч ирэх (overflow-hidden) — үсэг бүр hero-char
+                      <span key={w} className="mx-[0.12em] inline-block overflow-hidden pt-[0.06em] lg:mx-[0.18em]">
+                        {Array.from(w).map((c, i) => (
+                          <span key={i} className="hero-char inline-block bg-gradient-to-b from-abyss to-deep bg-clip-text text-transparent">
+                            {c}
+                          </span>
+                        ))}
                       </span>
                     ))}
                   </span>

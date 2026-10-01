@@ -1,14 +1,13 @@
 import SmoothScroll from "@/components/SmoothScroll";
 import DropCursor from "@/components/DropCursor";
 import Navbar from "@/components/Navbar";
-import OutageBanner from "@/components/OutageBanner";
 import Hero from "@/components/sections/Hero";
 import WaterJourney from "@/components/sections/WaterJourney";
+import DropReveal from "@/components/sections/DropReveal";
+import About from "@/components/sections/About";
 import Services from "@/components/sections/Services";
 import WaterQuality from "@/components/sections/WaterQuality";
 import CityMap from "@/components/sections/CityMap";
-import Projects from "@/components/sections/Projects";
-import News from "@/components/sections/News";
 import CustomerServices from "@/components/sections/CustomerServices";
 import Contact from "@/components/sections/Contact";
 
@@ -20,15 +19,18 @@ export default function Home() {
       <main>
         <Hero />
         <WaterJourney />
-        <Services />
-        <WaterQuality />
-        <CityMap />
-        <Projects />
-        <News />
-        <CustomerServices />
+        {/* Аяллын дусал томорч цайвар (light) хэсгүүдийг нээнэ — уснаас гарахад эхлээд дроны бичлэг (Бидний тухай) */}
+        <DropReveal>
+          <About />
+          <Services />
+          <WaterQuality />
+          <CityMap />
+          <CustomerServices />
+        </DropReveal>
       </main>
-      <Contact />
-      <OutageBanner />
+      <div className="theme-light bg-foam text-abyss">
+        <Contact />
+      </div>
       <DropCursor />
     </>
   );

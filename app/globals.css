@@ -35,8 +35,9 @@
   --text-stat--font-weight: 700;
 }
 
-/* Сайт бүхэлдээ "усны гүн" (dark): Hero-д шумбасны дараах бүх хэсэг.
-   Зөвхөн Hero-ийн гадаргуу ба түүн дээрх navbar .theme-light-аар цайвар.
+/* Үндсэн нь "усны гүн" (dark): Hero-д шумбасны дараах усан доорх хэсэг (WaterJourney).
+   Hero-ийн гадаргуу, аяллын дараах хэсгүүд (DropReveal.tsx, Contact) ба тэдгээр дээрх navbar .theme-light-аар цайвар;
+   тэдгээрийн дундах Усны чанар ба Хотын мап (.theme-dark) дахин бараан.
    Tailwind-ийн өнгөний utility-үүд var()-аар уншдаг тул энд солиход бүгд дагана. */
 :root {
   color-scheme: dark;
@@ -63,6 +64,20 @@
   --color-leaf: #0b8458;
   --color-alert: #d7263d;
   --color-white: #fff;
+}
+/* Цайвар хэсгийн дотор дахин бараан (Усны чанар — WaterQuality.tsx): :root-ийн dark утгууд */
+.theme-dark {
+  color-scheme: dark;
+  --color-abyss: #e4f2fb;
+  --color-deep: #8fd6f7;
+  --color-water: #38b6f0;
+  --color-aqua: #5fd3f7;
+  --color-shallow: #072540;
+  --color-foam: #041a2e;
+  --color-mist: #8fb3c9;
+  --color-leaf: #34c28a;
+  --color-alert: #ff5a6e;
+  --color-white: #0b2e4c;
 }
 
 html {
@@ -106,6 +121,25 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+}
+/* Аяллын дараах цайвар хэсгүүд (DropReveal.tsx) */
+.theme-light .text-glow {
+  text-shadow: 0 0 40px rgba(255, 255, 255, 0.75);
+}
+.theme-light .glass {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(232, 245, 253, 0.75));
+  border: 1px solid rgba(0, 120, 190, 0.12);
+  box-shadow: 0 18px 50px -24px rgba(4, 33, 58, 0.18);
+}
+.theme-dark .text-glow {
+  text-shadow: 0 0 40px rgba(56, 182, 240, 0.45);
+}
+.theme-dark .glass {
+  background: linear-gradient(160deg, rgba(14, 52, 86, 0.85), rgba(7, 37, 64, 0.72));
+  border: 1px solid rgba(56, 182, 240, 0.16);
+  box-shadow:
+    0 18px 50px -24px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .eyebrow {
@@ -191,6 +225,43 @@ body {
   pointer-events: none;
   -webkit-mask-image: radial-gradient(ellipse 60% 55% at 50% 55%, rgb(0 0 0 / 0.3), #000 85%);
   mask-image: radial-gradient(ellipse 60% 55% at 50% 55%, rgb(0 0 0 / 0.3), #000 85%);
+}
+/* Картын зургийн хэсэг: 3D (JourneyStage3D) ачаалж байхад (loading) ба зурж байхад (on) хуучин SVG нуугдана.
+   SVG нь DOM-д үлдэнэ — WebGL байхгүй / алдаа / context алдагдах / ?journey3d=off үед (attribute-гүй) буцаж харагдана. */
+.journey-visual > svg {
+  transition: opacity 0.35s ease;
+}
+[data-journey-3d] .journey-visual > svg {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.35s ease,
+    visibility 0s linear 0.35s;
+}
+/* 3D ачаалж байх хооронд хуучин зургийн оронд зөөлөн ачааллын гэрэл */
+[data-journey-3d="loading"] .journey-visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, rgb(95 211 247 / 0.12) 50%, transparent 70%);
+  background-size: 250% 100%;
+  animation: three-loading 1.8s ease-in-out infinite;
+}
+/* 3D ачаалж байх үеийн дэвсгэр (Services-ийн 3D зургууд) */
+.three-loading {
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, rgb(95 211 247 / 0.14) 50%, transparent 70%);
+  background-size: 250% 100%;
+  animation: three-loading 1.8s ease-in-out infinite;
+}
+@keyframes three-loading {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
 }
 /* картуудыг холбох усны хоолой: scroll хийх тусам ус урсаж дүүрнэ (clip-path-аар) */
 .journey-pipe {
@@ -332,6 +403,89 @@ body {
   border-radius: 50%;
   pointer-events: none;
   border: 1.5px solid rgb(95 211 247 / 0.8);
+}
+
+/* Аяллын дусал урсгал ус шиг томорч дараагийн хэсгийг нээнэ (DropReveal.tsx): хэмжээ, хэлбэрийг JS тохируулна */
+/* шилжилтийн үед cursor-ын дусал өөрөө томорч байгаа мэт: cursor түр нуугдана (дусал нь cursor-ыг дагана) */
+html.reveal-cursor .cursor-lens,
+html.reveal-cursor .cursor-dot {
+  visibility: hidden;
+}
+/* ирмэг, долгион: дуслын clip-ээс гадуур тул дэлгэцэн дээр тогтсон давхарга */
+.reveal-fx {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  visibility: hidden;
+}
+.reveal-rim,
+.reveal-ring {
+  fill: none;
+  stroke-linejoin: round;
+}
+/* усны гадаргуугийн хүрээ: нимгэн цагаан шугам + цэнхэр туяа */
+.reveal-rim {
+  stroke: rgb(255 255 255 / 0.85);
+  stroke-width: 1.5;
+}
+.reveal-rim--soft {
+  stroke: rgb(95 211 247 / 0.4);
+  stroke-width: 7;
+}
+.reveal-rim--glow {
+  stroke: rgb(56 182 240 / 0.16);
+  stroke-width: 24;
+}
+.reveal-ring {
+  stroke: rgb(95 211 247 / 0.9);
+  stroke-width: 1.5;
+}
+/* хэсэг уснаас гарах үеийн гялалзсан усны гадаргуу (дээрээс доош гүйнэ) */
+.reveal-surface {
+  fill: none;
+  stroke: rgb(255 255 255 / 0.95);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+.reveal-surface--glow {
+  stroke: rgb(160 225 250 / 0.45);
+  stroke-width: 16;
+}
+/* дуслын дотор: усны цаанаас харах мэт (blur, өнгө, урсгалыг JS бууруулна) */
+.reveal-veil {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 40;
+  width: 100%;
+  height: 100svh;
+  overflow: hidden;
+  pointer-events: none;
+  visibility: hidden;
+}
+/* эхэндээ хуудаслалтын дусал шиг дүүрэн, томрох тусам тунгалаг болно */
+.reveal-drop {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 41;
+  border-radius: 50%;
+  pointer-events: none;
+  visibility: hidden;
+  background: radial-gradient(circle at 35% 30%, #fff 0 15%, #5fd3f7 55%, #1f8fd0);
+}
+/* дуслын гялбаа */
+.reveal-drop::after {
+  content: "";
+  position: absolute;
+  left: 14%;
+  top: 10%;
+  width: 26%;
+  height: 16%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(255 255 255 / 0.6), transparent);
+  transform: rotate(-35deg);
 }
 
 /* JS intro эхлэхээс өмнө нуугдана; JS ажиллахгүй бол 4с-ийн дараа гарч ирнэ */
@@ -614,6 +768,150 @@ html.drop-cursor :is(input:not([type="checkbox"], [type="radio"], [type="button"
   animation: bubble-rise 2.4s ease-in infinite;
 }
 
+/* ---- Үйлчилгээ (Services.tsx), Бидний тухай (About.tsx): ус шиг гадаргуу ба зурагнуудын хөдөлгөөн ---- */
+/* Усны чанарын арын бүдэг усны долгио: дээд/доод ирмэгээрээ уусна */
+.quality-flow {
+  -webkit-mask-image: linear-gradient(transparent, #000 20%, #000 80%, transparent);
+  mask-image: linear-gradient(transparent, #000 20%, #000 80%, transparent);
+}
+/* Бидний үйл ажиллагааны арын усны урсгал: дээд/доод ирмэгээрээ цагаан дэвсгэрт уусна */
+.svc-flow {
+  -webkit-mask-image: linear-gradient(transparent, #000 22%, #000 78%, transparent);
+  mask-image: linear-gradient(transparent, #000 22%, #000 78%, transparent);
+}
+/* дээд ирмэг: жинхэнэ ус шиг гадаргуу (services/WaterEdge.tsx) — хэлбэрийг JS кадр бүр зурна */
+.svc-wave {
+  position: absolute;
+  bottom: calc(100% - 1px);
+  left: 0;
+  width: 100%;
+  height: 64px;
+  overflow: visible;
+  pointer-events: none;
+  /* өөрийн давхарга: кадр бүр дахин зурагдахад доорх картыг дахин зурахгүй */
+  will-change: transform;
+}
+@media (min-width: 640px) {
+  .svc-wave {
+    height: 96px;
+  }
+}
+.svc-stop {
+  stop-color: var(--svc-top);
+}
+/* оргил: гэрэл нэвтэрсэн цайвар, бага зэрэг тунгалаг */
+.svc-stop-light {
+  stop-color: var(--svc-top);
+  stop-color: color-mix(in srgb, var(--svc-top), #fff 35%);
+  stop-opacity: 0.84;
+}
+/* холын давалгаа */
+.svc-wave__back {
+  fill: var(--svc-top);
+  fill: color-mix(in srgb, var(--svc-top), #fff 45%);
+  opacity: 0.55;
+}
+/* гадаргуугийн доор хугарсан гэрлийн зурвас */
+.svc-wave__under {
+  fill: none;
+  stroke: rgb(255 255 255 / 0.16);
+  stroke-width: 1.2;
+}
+/* оргилын гэрэл: зөөлөн туяа + гүйх гялбаатай нимгэн шугам */
+.svc-wave__glow {
+  fill: none;
+  stroke: rgb(255 255 255 / 0.16);
+  stroke-width: 5;
+  stroke-linejoin: round;
+}
+.svc-wave__crest {
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+/* тайван ус (About — бараан бичлэг дээр): саарал бүдэг биш, гэрэлтэй цайвар цэнхэр ус */
+.svc-wave[data-variant="calm"] .svc-stop-light {
+  stop-color: color-mix(in srgb, var(--svc-top), #2f9fdc 34%);
+  stop-opacity: 0.96;
+}
+.svc-wave[data-variant="calm"] .svc-wave__back {
+  fill: color-mix(in srgb, var(--svc-top), #2f9fdc 55%);
+  opacity: 0.28;
+}
+.svc-wave[data-variant="calm"] .svc-wave__under {
+  stroke: rgb(47 159 220 / 0.2);
+}
+/* зурагнуудын амьд хөдөлгөөн (services/Illustrations.tsx) */
+.svc-float {
+  transform-box: fill-box;
+  animation: svc-float 5s ease-in-out infinite alternate;
+}
+@keyframes svc-float {
+  to {
+    transform: translateY(-9px);
+  }
+}
+.svc-stream {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: svc-stream 0.45s ease-in-out infinite alternate;
+}
+@keyframes svc-stream {
+  to {
+    transform: scaleX(0.8);
+  }
+}
+.svc-splash {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: svc-splash 1.4s ease-out infinite;
+}
+@keyframes svc-splash {
+  from {
+    transform: scale(0.3);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+.svc-cloud {
+  animation: svc-cloud 16s ease-in-out infinite alternate;
+}
+@keyframes svc-cloud {
+  from {
+    transform: translateX(-30px);
+  }
+  to {
+    transform: translateX(40px);
+  }
+}
+.svc-drift {
+  animation: svc-drift 5s linear infinite;
+}
+@keyframes svc-drift {
+  to {
+    transform: translateX(520px);
+  }
+}
+.svc-twinkle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: svc-twinkle 2.4s ease-in-out infinite;
+}
+@keyframes svc-twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -622,5 +920,16 @@ html.drop-cursor :is(input:not([type="checkbox"], [type="radio"], [type="button"
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+  }
+}
+
+/* Мобайл аппын утас долгионы дээгүүр хөвнө (AppPromo.tsx; motion-safe) */
+@keyframes app-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(-1deg);
   }
 }

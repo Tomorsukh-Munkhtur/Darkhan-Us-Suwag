@@ -21,6 +21,8 @@ const fragment = /* glsl */ `
   uniform vec2 uMouse;
   uniform vec2 uRes;
   uniform float uStrength;
+  uniform float uEven;
+  uniform float uInk;
 
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   float noise(vec2 p) {
@@ -59,19 +61,20 @@ const fragment = /* glsl */ `
 
     float t = uTime * 0.35;
     float n = fbm(p * 2.2 + vec2(t * 0.4, -t * 0.25));
-    // голд зураас тархмал, бүдэг (анхаарал татахгүй); захаар зөөлөн нимгэн зураас
-    float edge = smoothstep(0.2, 0.9, length((uv - 0.5) * vec2(aspect, 1.0)));
+    // голд зураас тархмал, бүдэг (анхаарал татахгүй); захаар зөөлөн нимгэн зураас. uEven: хаа сайгүй ижил тод
+    float edge = mix(smoothstep(0.2, 0.9, length((uv - 0.5) * vec2(aspect, 1.0))), 1.0, uEven);
     float c = caustic(p * 3.2 + n * 0.8, uTime, mix(0.3, 0.05, edge)) * mix(0.45, 1.0, edge);
 
     // давалгааны зөөлөн гэрэл + caustic тор + хулганы гэрэл — бүгд бүдэг
     float swell = smoothstep(0.35, 0.8, n) * 0.25;
-    float light = (c * 0.8 + swell + exp(-d * 2.4) * 0.15) * uStrength;
-    vec3 col = mix(vec3(0.22, 0.71, 0.94), vec3(0.75, 0.93, 1.0), c);
+    float light = (c + swell + exp(-d * 2.4) * 0.15) * uStrength;
+    // uInk: цайвар (цагаан) дэвсгэр дээр харагдахаар гэрэл нь цэнхэр (бараан дээр цайвар)
+    vec3 col = mix(mix(vec3(0.22, 0.71, 0.94), vec3(0.75, 0.93, 1.0), c), mix(vec3(0.1, 0.5, 0.82), vec3(0.3, 0.7, 0.94), c), uInk);
     gl_FragColor = vec4(col * light, light);
   }
 `;
 
-function Plane({ strength }: { strength: number }) {
+function Plane({ strength, speed, even, ink }: { strength: number; speed: number; even: boolean; ink: boolean }) {
   const mat = useRef<THREE.ShaderMaterial>(null);
   const { size } = useThree();
   const mouse = useRef(new THREE.Vector2());
@@ -82,15 +85,17 @@ function Plane({ strength }: { strength: number }) {
       uMouse: { value: new THREE.Vector2() },
       uRes: { value: new THREE.Vector2(1, 1) },
       uStrength: { value: strength },
+      uEven: { value: even ? 1 : 0 },
+      uInk: { value: ink ? 1 : 0 },
     }),
-    [strength],
+    [strength, even, ink],
   );
 
   useFrame((state, delta) => {
     if (!mat.current) return;
     const u = mat.current.uniforms;
     // удаан хөдөлгөөн — дэвсгэр анхаарал татах ёсгүй
-    u.uTime.value += Math.min(delta, 0.05) * 0.4;
+    u.uTime.value += Math.min(delta, 0.05) * 0.4 * speed;
     mouse.current.lerp(state.pointer, 0.06);
     u.uMouse.value.copy(mouse.current);
     u.uRes.value.set(size.width, size.height);
@@ -105,8 +110,26 @@ function Plane({ strength }: { strength: number }) {
   );
 }
 
-/** Бараан хэсгийн ард бүдэг усны гадаргуу (Hero-гийн усны бүдэг хувилбар). Бага нягтралаар зурна — зөөлөн дэвсгэр. */
-export default function WaterSurface({ running = true, reduced = false, strength = 0.17 }: { running?: boolean; reduced?: boolean; strength?: number }) {
+/**
+ * Бараан хэсгийн ард бүдэг усны гадаргуу (Hero-гийн усны бүдэг хувилбар). Бага нягтралаар зурна — зөөлөн дэвсгэр.
+ * speed: хөдөлгөөний хурдны үржүүлэгч; even: голыг бүдгэрүүлэхгүй (DropReveal-ийн дусал дотор);
+ * ink: цайвар дэвсгэр дээр цэнхэр гэрлээр зурна (Бидний үйл ажиллагаа).
+ */
+export default function WaterSurface({
+  running = true,
+  reduced = false,
+  strength = 0.2125,
+  speed = 1,
+  even = false,
+  ink = false,
+}: {
+  running?: boolean;
+  reduced?: boolean;
+  strength?: number;
+  speed?: number;
+  even?: boolean;
+  ink?: boolean;
+}) {
   return (
     <Canvas
       dpr={0.5}
@@ -116,7 +139,7 @@ export default function WaterSurface({ running = true, reduced = false, strength
       eventPrefix="client"
       style={{ position: "absolute", inset: 0 }}
     >
-      <Plane strength={strength} />
+      <Plane strength={strength} speed={speed} even={even} ink={ink} />
     </Canvas>
   );
 }

@@ -7,8 +7,8 @@ import { LogoMark } from "./ui/Logo";
 
 const items = [{ label: "Нүүр", href: "#top" }, ...nav];
 // Лого голд: хоёр талд тэнцүү
-const left = items.slice(0, 3);
-const right = items.slice(3);
+const left = items.slice(0, Math.ceil(items.length / 2));
+const right = items.slice(left.length);
 const pad = (n: number) => String(n).padStart(2, "0");
 const spring = { type: "spring", stiffness: 420, damping: 34 } as const;
 
@@ -136,7 +136,7 @@ function MobileMenu({ active, onClose }: { active: string | null; onClose: () =>
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
-  // Hero-ийн цайвар гадаргуу дээр байхад л цайвар; шумбаж усан доор ороход бараан (сайтын dark)
+  // Hero-ийн гадаргуу дээр болон аяллын дусал цайвар хэсгийг нээсний дараа (DropReveal) цайвар; усан доор бараан
   const [surface, setSurface] = useState(true);
   // доош гүйлгэхэд нуугдаж, дээш гүйлгэхэд гарна (Hero-ийн шумбалтын үед үргэлж харагдана)
   const [hidden, setHidden] = useState(false);
@@ -150,6 +150,9 @@ export default function Navbar() {
   useEffect(() => {
     const deep = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0.9 : 0.25;
     const targets = items.map((n) => ({ href: n.href, el: document.querySelector<HTMLElement>(n.href) }));
+    const lightZone = document.getElementById("light-zone");
+    // цайвар хэсгүүдийн дундах dark хэсэг (Усны чанар) — navbar дор нь байвал бараан
+    const darkZones = [...document.querySelectorAll<HTMLElement>("[data-nav-dark]")];
     let lastY = window.scrollY;
     let raf = 0;
     const update = () => {
@@ -157,7 +160,13 @@ export default function Navbar() {
       const y = window.scrollY;
       const vh = window.innerHeight;
       setScrolled(y > 40);
-      setSurface(y < vh * deep);
+      // data-nav-dark="false" — шилжилт хараахан navbar-ыг бүрхээгүй (DropReveal)
+      const overDark = darkZones.some((z) => {
+        if (z.dataset.navDark === "false") return false;
+        const r = z.getBoundingClientRect();
+        return r.top <= 40 && r.bottom >= 40;
+      });
+      setSurface(!overDark && (y < vh * deep || lightZone?.dataset.navLight === "true"));
       if (Math.abs(y - lastY) > 6) {
         setHidden(y > lastY && y > vh * 2.2);
         lastY = y;

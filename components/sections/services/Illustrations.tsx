@@ -2,8 +2,7 @@ import { useId } from "react";
 
 /**
  * Үйлчилгээ бүрийн зураглал (16:11). Бодит зураг ирвэл Services.tsx дээр солино.
- * "slice" — parallax-ийн өндөр wrapper-ийг дүүргэнэ.
- * Сайт dark тул шөнийн өнгөтэй: цагаан тодотгол (урсгал, бөмбөлөг) л цайвар хэвээр.
+ * "slice" — картын зургийн хайрцгийг дүүргэнэ. Амьд хөдөлгөөн (svc-*) нь globals.css-д; карт дэлгэцэн дээр байхад л хөдөлнө.
  */
 type Props = { className?: string };
 
@@ -18,13 +17,13 @@ export function SupplyArt({ className }: Props) {
     <svg viewBox="0 0 480 330" preserveAspectRatio="xMidYMid slice" className={className} aria-hidden>
       <defs>
         <linearGradient id={`${id}b`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#0f3a5e" />
-          <stop offset="1" stopColor="#0b2e4c" />
+          <stop offset="0" stopColor="#e9f6fd" />
+          <stop offset="1" stopColor="#cbe8f8" />
         </linearGradient>
         <linearGradient id={`${id}c`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#d6e2ea" />
-          <stop offset=".5" stopColor="#7a93a6" />
-          <stop offset="1" stopColor="#3e5669" />
+          <stop offset="0" stopColor="#f4f8fb" />
+          <stop offset=".5" stopColor="#c3d3de" />
+          <stop offset="1" stopColor="#8fa6b6" />
         </linearGradient>
         <linearGradient id={`${id}w`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#7fd0f3" />
@@ -36,32 +35,40 @@ export function SupplyArt({ className }: Props) {
       </defs>
 
       <rect width="480" height="330" fill={`url(#${id}b)`} />
-      <g fill="#38b6f0" opacity=".12">
-        <circle cx="70" cy="240" r="28" />
-        <circle cx="118" cy="190" r="12" />
-        <circle cx="420" cy="92" r="32" />
-        <circle cx="446" cy="164" r="10" />
+      <g fill="#fff" opacity=".55">
+        {[
+          [70, 240, 28],
+          [118, 190, 12],
+          [420, 92, 32],
+          [446, 164, 10],
+        ].map(([cx, cy, r], i) => (
+          <circle key={cx} className="svc-float" cx={cx} cy={cy} r={r} style={{ animationDelay: `${-i * 1.3}s` }} />
+        ))}
       </g>
-      <rect y="306" width="480" height="24" fill="#0a2a45" />
+      <rect y="306" width="480" height="24" fill="#b9dcef" />
 
       {/* цорго */}
       <rect x="-10" y="56" width="210" height="28" rx="10" fill={chrome} />
       <rect x="176" y="40" width="74" height="60" rx="16" fill={chrome} />
-      <rect x="203" y="18" width="20" height="24" rx="4" fill="#6f889b" />
+      <rect x="203" y="18" width="20" height="24" rx="4" fill="#9fb4c3" />
       <rect x="180" y="10" width="66" height="14" rx="7" fill={chrome} />
       <path d="M244 58h40a18 18 0 0118 18v28h-26V84h-32z" fill={chrome} />
-      <rect x="274" y="100" width="30" height="8" rx="3" fill="#5a7488" />
+      <rect x="274" y="100" width="30" height="8" rx="3" fill="#8fa6b6" />
 
       {/* урсгал */}
-      <rect x="281" y="108" width="16" height="140" rx="8" fill={water} opacity=".85" />
+      <rect className="svc-stream" x="281" y="108" width="16" height="140" rx="8" fill={water} opacity=".85" />
       <path className="flow" d="M289 112V244" stroke="#fff" strokeWidth="3" strokeLinecap="round" opacity=".8" />
 
       {/* аяга */}
       <g clipPath={`url(#${id}g)`}>
-        <rect x="230" y="190" width="130" height="130" fill="#9fd8f5" opacity=".15" />
+        <rect x="230" y="190" width="130" height="130" fill="#fff" opacity=".45" />
         <g className="animate-[wave-x_3s_linear_infinite]">
           <path d="M200 238q15-8 30 0t30 0 30 0 30 0 30 0 30 0 30 0 30 0V320H200z" fill={water} opacity=".85" />
         </g>
+        {/* урсгал усанд цохигдох газрын цацрал */}
+        {[0, 0.7].map((d) => (
+          <ellipse key={d} className="svc-splash" cx="289" cy="240" rx="16" ry="4" fill="none" stroke="#fff" strokeWidth="2" style={{ animationDelay: `${d}s` }} />
+        ))}
         {[252, 300, 324].map((x, i) => (
           <circle key={x} className="bubble" cx={x} cy="298" r={2.5 + i} fill="#fff" opacity=".85" style={{ animationDelay: `${i * 0.7}s` }} />
         ))}
@@ -89,35 +96,40 @@ export function SewerArt({ className }: Props) {
     <svg viewBox="0 0 480 330" preserveAspectRatio="xMidYMid slice" className={className} aria-hidden>
       <defs>
         <linearGradient id={`${id}s`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#0f3a5e" />
-          <stop offset="1" stopColor="#0b2e4c" />
+          <stop offset="0" stopColor="#eef8fe" />
+          <stop offset="1" stopColor="#d8eefa" />
         </linearGradient>
         <linearGradient id={`${id}g`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#3a3122" />
-          <stop offset="1" stopColor="#2b2418" />
+          <stop offset="0" stopColor="#efe5d3" />
+          <stop offset="1" stopColor="#dccaa8" />
         </linearGradient>
         <linearGradient id={`${id}p`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#4a6275" />
-          <stop offset="1" stopColor="#2c3f4d" />
+          <stop offset="0" stopColor="#b6c4cd" />
+          <stop offset="1" stopColor="#7d8f9c" />
         </linearGradient>
       </defs>
 
       <rect width="480" height="120" fill={`url(#${id}s)`} />
+      {/* үүл */}
+      <g fill="#fff" opacity=".9">
+        <path className="svc-cloud" d="M60 34a14 14 0 0126-6 11 11 0 0118 9 9 9 0 01-2 18H64a10 10 0 01-4-21z" />
+        <path className="svc-cloud" style={{ animationDelay: "-7s" }} d="M318 22a12 12 0 0122-5 9 9 0 0115 8 8 8 0 01-2 15h-32a9 9 0 01-3-18z" />
+      </g>
       {houses.map((h) => (
         <g key={h.x}>
-          <rect x={h.x} y={118 - h.h} width={h.w} height={h.h} fill="#16405f" stroke="#2a5f86" strokeWidth="2" />
+          <rect x={h.x} y={118 - h.h} width={h.w} height={h.h} fill="#fff" stroke="#cfe3ef" strokeWidth="2" />
           <path d={`M${h.x - 8} ${118 - h.h}L${h.x + h.w / 2} ${90 - h.h}L${h.x + h.w + 8} ${118 - h.h}Z`} fill="#6aaed8" />
-          <rect x={h.x + h.w / 2 - 10} y={136 - h.h} width="20" height="16" rx="2" fill="#ffd66b" />
+          <rect x={h.x + h.w / 2 - 10} y={136 - h.h} width="20" height="16" rx="2" fill="#bfe3f5" />
         </g>
       ))}
 
       {/* зам */}
-      <rect y="116" width="480" height="14" fill="#1f3444" />
+      <rect y="116" width="480" height="14" fill="#cfd9df" />
       <path d="M0 123h480" stroke="#fff" strokeWidth="2" strokeDasharray="18 14" />
 
       {/* хөрс */}
       <rect y="130" width="480" height="200" fill={`url(#${id}g)`} />
-      <g fill="#6b5a3a" opacity=".6">
+      <g fill="#c8b288" opacity=".5">
         <circle cx="40" cy="170" r="4" />
         <circle cx="150" cy="300" r="5" />
         <circle cx="260" cy="180" r="3" />
@@ -130,19 +142,33 @@ export function SewerArt({ className }: Props) {
         const x = h.x + h.w / 2;
         return (
           <g key={h.x}>
-            <path d={`M${x} 130V226`} stroke="#3e5669" strokeWidth="10" strokeLinecap="round" />
+            <path d={`M${x} 130V226`} stroke="#9aabb7" strokeWidth="10" strokeLinecap="round" />
             <path className="flow-slow" d={`M${x} 132V224`} stroke="#3aa981" strokeWidth="3" />
           </g>
         );
       })}
       <rect x="-10" y="222" width="500" height="44" rx="22" fill={`url(#${id}p)`} />
-      <rect x="-10" y="230" width="500" height="28" rx="14" fill="#0e1a22" opacity=".5" />
+      <rect x="-10" y="230" width="500" height="28" rx="14" fill="#4a6070" opacity=".35" />
       <path className="flow" d="M0 244H480" stroke="#3aa981" strokeWidth="10" strokeLinecap="round" opacity=".85" />
+      {/* шугамаар урсах хэсгүүд */}
+      <g fill="#2f7f63" opacity=".55">
+        {[0, 1.2, 2.3, 3.4, 4.3].map((d, i) => (
+          <circle key={d} className="svc-drift" cx="-20" cy={238 + (i % 3) * 5} r={3 + (i % 2)} style={{ animationDelay: `${-d}s` }} />
+        ))}
+      </g>
 
       {/* худаг */}
-      <rect x="404" y="128" width="36" height="96" fill="#3e5669" />
-      <path d="M410 146h24M410 166h24M410 186h24M410 206h24" stroke="#5a7488" strokeWidth="3" />
-      <ellipse cx="422" cy="121" rx="26" ry="6" fill="#2c3f4d" />
+      <rect x="404" y="128" width="36" height="96" fill="#b8c6cf" />
+      <path d="M410 146h24M410 166h24M410 186h24M410 206h24" stroke="#8fa0ab" strokeWidth="3" />
+      <ellipse cx="422" cy="121" rx="26" ry="6" fill="#7d8f9c" />
+      {/* өргөх насосны сэнс эргэнэ */}
+      <circle cx="422" cy="176" r="15" fill="#fff" stroke="#8fa0ab" strokeWidth="3" />
+      <g style={{ transformOrigin: "422px 176px", animation: "turn 1.6s linear infinite" }} fill="#3aa981">
+        {[0, 90, 180, 270].map((a) => (
+          <path key={a} d="M422 176l2-11a4 4 0 00-4 0z" transform={`rotate(${a} 422 176)`} />
+        ))}
+      </g>
+      <circle cx="422" cy="176" r="3" fill="#4a6070" />
     </svg>
   );
 }
@@ -158,21 +184,21 @@ export function TreatmentArt({ className }: Props) {
     <svg viewBox="0 0 480 330" preserveAspectRatio="xMidYMid slice" className={className} aria-hidden>
       <defs>
         <linearGradient id={`${id}g`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#0e3440" />
-          <stop offset="1" stopColor="#0a2a36" />
+          <stop offset="0" stopColor="#eef7f2" />
+          <stop offset="1" stopColor="#d9eae1" />
         </linearGradient>
         <radialGradient id={`${id}m`}>
-          <stop offset="0" stopColor="#2d6a55" />
-          <stop offset="1" stopColor="#1a4a3a" />
+          <stop offset="0" stopColor="#c3dccd" />
+          <stop offset="1" stopColor="#8db5a1" />
         </radialGradient>
         <radialGradient id={`${id}c`}>
-          <stop offset="0" stopColor="#5fc4f0" />
-          <stop offset="1" stopColor="#1f7fbf" />
+          <stop offset="0" stopColor="#c6ecfc" />
+          <stop offset="1" stopColor="#4fb3e6" />
         </radialGradient>
       </defs>
 
       <rect width="480" height="330" fill={`url(#${id}g)`} />
-      <g fill="#2f9e73" opacity=".6">
+      <g fill="#6fd8a6" opacity=".7">
         <circle cx="30" cy="300" r="14" />
         <circle cx="52" cy="312" r="10" />
         <circle cx="262" cy="36" r="12" />
@@ -181,19 +207,23 @@ export function TreatmentArt({ className }: Props) {
       </g>
 
       {/* удирдлагын байр */}
-      <rect x="24" y="18" width="64" height="40" rx="4" fill="#16405f" stroke="#2a5f86" strokeWidth="2" />
+      <rect x="24" y="18" width="64" height="40" rx="4" fill="#fff" stroke="#cfe3ef" strokeWidth="2" />
       <rect x="24" y="18" width="64" height="8" rx="3" fill="#6aaed8" />
 
       {/* савнуудыг холбох суваг ба гол руу гарах шугам */}
-      <path d="M150 170H350" stroke="#2c4a62" strokeWidth="22" />
+      <path d="M150 170H350" stroke="#cdd8de" strokeWidth="22" />
       <path className="flow-slow" d="M160 170H340" stroke="#7cc7ec" strokeWidth="8" />
       <path d="M300 330Q380 294 480 298V330Z" fill="#7cc7ec" opacity=".85" />
-      <path d="M350 222v46q0 22 22 22h108" stroke="#2c4a62" strokeWidth="18" fill="none" />
+      {/* гол урсана */}
+      <g className="animate-[wave-x_3.5s_linear_infinite]">
+        <path d="M330 316q15-6 30 0t30 0 30 0 30 0 30 0 30 0 30 0" stroke="#fff" strokeWidth="2" fill="none" opacity=".7" />
+      </g>
+      <path d="M350 222v46q0 22 22 22h108" stroke="#cdd8de" strokeWidth="18" fill="none" />
       <path className="flow" d="M350 226v42q0 22 22 22h108" stroke="#4fb3e6" strokeWidth="6" fill="none" />
 
       {tanks.map((t, i) => (
         <g key={t.cx}>
-          <circle cx={t.cx} cy={t.cy} r={t.r} fill="#2c4a62" />
+          <circle cx={t.cx} cy={t.cy} r={t.r} fill="#cdd8de" />
           <circle cx={t.cx} cy={t.cy} r={t.r - 10} fill={t.fill} />
           {[0, 1.6].map((d) => (
             <circle
@@ -209,11 +239,29 @@ export function TreatmentArt({ className }: Props) {
             />
           ))}
           <g style={{ transformOrigin: `${t.cx}px ${t.cy}px`, animation: `turn ${t.speed} linear infinite` }}>
-            <rect x={t.cx - 4} y={t.cy - t.r + 10} width="8" height={t.r - 10} fill="#7f97aa" />
-            <rect x={t.cx - 10} y={t.cy - t.r + 12} width="20" height="10" rx="3" fill="#5f788b" />
+            <rect x={t.cx - 4} y={t.cy - t.r + 10} width="8" height={t.r - 10} fill="#6f8593" />
+            <rect x={t.cx - 10} y={t.cy - t.r + 12} width="20" height="10" rx="3" fill="#4d6574" />
           </g>
-          <circle cx={t.cx} cy={t.cy} r="12" fill="#d6e2ea" stroke="#6f889b" strokeWidth="3" />
+          <circle cx={t.cx} cy={t.cy} r="12" fill="#fff" stroke="#9fb3bf" strokeWidth="3" />
         </g>
+      ))}
+      {/* биологийн сав: агааржуулалтын бөмбөлөг */}
+      {[
+        [104, 222],
+        [132, 238],
+        [176, 230],
+        [196, 206],
+        [118, 150],
+      ].map(([x, y], i) => (
+        <circle key={x} className="bubble" cx={x} cy={y} r={3 + (i % 3)} fill="#fff" opacity=".85" style={{ animationDelay: `${-i * 0.5}s` }} />
+      ))}
+      {/* цэвэр ус гялалзана */}
+      {[
+        [318, 118],
+        [384, 170],
+        [352, 196],
+      ].map(([x, y], i) => (
+        <path key={x} className="svc-twinkle" d={`M${x} ${y - 7}l2 5 5 2-5 2-2 5-2-5-5-2 5-2z`} fill="#fff" style={{ animationDelay: `${-i * 0.8}s` }} />
       ))}
     </svg>
   );

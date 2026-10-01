@@ -67,7 +67,7 @@ export default function DripDots({ items, active }: { items: { id: string; label
   }, [active]);
 
   return (
-    <nav aria-label="Усны аяллын шатууд" className="drip-nav absolute bottom-[4.5rem] left-1/2 z-20 -translate-x-1/2 sm:bottom-8">
+    <nav aria-label="Усны аяллын шатууд" className="drip-nav absolute bottom-8 left-1/2 z-20 -translate-x-1/2">
       <div ref={box} className="relative h-4" style={{ width: (items.length - 1) * GAP + 16 }}>
         {items.map((s, i) => (
           <a

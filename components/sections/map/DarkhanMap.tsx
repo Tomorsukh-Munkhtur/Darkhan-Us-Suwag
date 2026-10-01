@@ -1,5 +1,4 @@
 import { useId } from "react";
-import { outages } from "@/lib/content";
 import { seeded } from "@/lib/seeded";
 
 /**
@@ -58,7 +57,6 @@ export default function DarkhanMap({ active, className }: { active: number; clas
   });
   const fade = (k: number) => ({ opacity: on(k) ? 1 : 0, transition: "opacity .8s" });
   const lit = on(5);
-  const o = outages[0];
 
   return (
     <svg viewBox="0 0 1600 900" overflow="visible" className={className} aria-hidden>
@@ -168,17 +166,6 @@ export default function DarkhanMap({ active, className }: { active: number; clas
         ))}
       </g>
 
-      {/* засвар */}
-      {o && (
-        <g>
-          <circle className="pulse-ring" cx={o.mapPoint.x} cy={o.mapPoint.y} r="12" fill="#ff5a6e" />
-          <circle cx={o.mapPoint.x} cy={o.mapPoint.y} r="8" fill="#ff5a6e" stroke="#fff" strokeWidth="3" />
-          <rect x={o.mapPoint.x + 16} y={o.mapPoint.y - 13} width="150" height="26" rx="13" fill="#0b2e4c" stroke="#ff5a6e" strokeOpacity=".5" />
-          <text x={o.mapPoint.x + 30} y={o.mapPoint.y + 5} fill="#ff5a6e" fontSize="13" style={{ fontFamily: "var(--font-sans)", fontWeight: 700 }}>
-            ЗАСВАР · {o.area}
-          </text>
-        </g>
-      )}
     </svg>
   );
 }

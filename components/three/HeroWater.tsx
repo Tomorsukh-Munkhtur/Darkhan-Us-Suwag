@@ -467,7 +467,7 @@ function Water({ title, dive, reduced, onReady }: Omit<Props, "running">) {
   );
 }
 
-/** Hero: тунгалаг усан доорх "ДАРХАН ХОТ". Хулгана, дуслаар ус хөдөлнө; scroll-оор ус руу шумбана. */
+/** Hero: тунгалаг усан доорх "ДАРХАН УС СУВАГ". Хулгана, дуслаар ус хөдөлнө; scroll-оор ус руу шумбана. */
 export default function HeroWater({ running, ...props }: Props) {
   return (
     <Canvas
