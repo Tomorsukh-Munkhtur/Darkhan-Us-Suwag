@@ -7,10 +7,10 @@ import { useEffect, useSyncExternalStore } from "react";
  * Зогссон canvas сүүлийн кадраа харуулсаар байна (WaterSurface хөлдсөн дэвсгэр болно).
  *
  * Санал болгох priority: HeroWater (3) > Services-ийн картууд (2.5–2.9, харагдах хувиар; useCardRenderSlot)
- * > Journey 3D (2) > WaterSurface (1). (Картын мөр гарч ирэхэд Journey хэсэг дэлгэцээс гарч байгаа тул карт давуу.)
+ * > Хотын 3D газрын зураг (2.4) > Journey 3D (2) > WaterSurface (1). (Картын мөр гарч ирэхэд Journey хэсэг дэлгэцээс гарч байгаа тул карт давуу.)
  * → Hero шумбалтын үед Journey 3D хүлээнэ; Journey 3D ажиллаж байхад WaterSurface зогсоно.
  */
-export const RENDER_PRIORITY = { heroWater: 3, serviceCard: 2.5, journey3d: 2, waterSurface: 1 } as const;
+export const RENDER_PRIORITY = { heroWater: 3, serviceCard: 2.5, cityMap: 2.4, journey3d: 2, waterSurface: 1 } as const;
 
 type Entry = { id: string; priority: number; wants: boolean };
 export type RenderSlotState = { id: string; priority: number; wants: boolean; allowed: boolean };

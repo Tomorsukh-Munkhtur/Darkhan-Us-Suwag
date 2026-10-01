@@ -1981,3 +1981,69 @@ The lab can override the tier (`?tier=`).
 - LOW idle renders 0 frames, and reverse-scroll frames are pixel-identical.
 - QA override: `?treatment3d=off|low|medium|high`.
 - It uses the shared `useCardRenderSlot` hook (id `services-treatment`) and `resize={{ offsetSize: true, scroll: false }}`.
+
+### 38.12 CityMap ("ДАРХАН ХОТЫН МАП") 3D City Infrastructure (IMPLEMENTED, same branch)
+
+*Added 2026-10-01.* The map world of the pinned CityMap section is now a full-bleed 3D miniature city: `components/three/citymap/CityMap3D.tsx` (wrapper) and a lazy `CityScene3D` chunk.
+
+**What did not change:**
+
+- The heading, the 6-step selector and spine, `StepCard` (desktop side and mobile bottom), the legend, the disclaimer, the outage chip and all copy.
+- The `DarkhanMap` SVG with its CSS camera. It stays rendered as the fallback.
+
+**`CityMap.tsx` changes:**
+
+- The pin ScrollTrigger also writes `self.progress` into a runtime ref (`onUpdate`/`onRefresh`).
+- The 3D layer is inserted between the SVG and the readability overlays.
+- The SVG layer is hidden while 3D is live.
+
+**Coordinates:** SVG px map to world units as `x = (sx − 800) / 100`, `z = (sy − 450) / 100`. Every element keeps its schematic position; this is not GIS.
+
+| File | Content |
+| --- | --- |
+| `layout.ts` | River beziers (from the SVG path), district street grids, arterial roads, wells, pumps, reservoir, plant, pipe polylines (SVG water/sewer paths, offset 8 px to the street verge), terrain height (value-noise hills, river valley carve, flat city core), network graph |
+| `state.ts` | `stageCoord(p)` (same `p / 0.9` mapping as the DOM `active`), the pure `cityState(v)`, the shot table and `cameraPose(v, mobile)` |
+| `world.ts` | Terrain, river ribbon, and road pieces split at computed intersections (markings and zebras in the shader), sidewalks/curbs, streetlight spots |
+| `city.ts` | Seeded buildings (Old: perimeter 4/5/9-floor panel slabs and schools; New: 9–16-floor slabs and towers; Industrial: halls) and seeded trees (courtyards, avenues, river belts, source buffer, countryside, hill conifers) |
+| `facilities.ts` | Wells and protection fence, 2 pump stations with lit flanges, open-top reservoir, treatment plant (2 clarifiers, aeration basins, process building, digesters, inlet works, lights), industrial silos, chimneys and tanks, repair beacon, ground decals |
+| `pipes.ts` | Tube network with per-vertex network distance; joints |
+
+**Network distance:** Dijkstra over the pipe graph.
+
+- **Clean water:**
+  - source part: `srcMax − distance to pump I`;
+  - distribution: `srcMax + distance from pump I`;
+  - the result is continuous and increases along the flow.
+- **Sewer:** `sewerMax − distance to the plant inlet`.
+- **Use:** fronts and pulses travel by this distance, and each building's supply/lighting delay is the network distance of its nearest clean node.
+
+**Stages** (`v ∈ [0, 6)`; each shot is held for the first 62 % of its step, then blended):
+
+| Stage | Effects |
+| --- | --- |
+| 0 | Wells, protection-zone ring and dashes, intake stubs; other zones dimmed |
+| 1 | Collector → pump I front, pump I lit, pump I → reservoir |
+| 2 | Reservoir level rises (from a 25 % base), reservoir → pump II, pump II lit |
+| 3 | City-wide distribution front; buildings get a cyan base line as water reaches them |
+| 4 | Sewer front toward the plant, plant activates (tanks turn teal), treated outfall to the river; clean pipes dimmed |
+| 5 | Windows light up in network-distance order |
+
+- Desktop focus shots put the target at NDC (−0.5, −0.1), left of the UI.
+- Mobile shots use NDC (0.36, 0.2), with mobile-specific targets for stages 1, 3 and 5.
+
+**Ambient:** used only for river/reservoir shimmer, the flow-phase increment, tree sway, the repair pulse and decal ripples. It is off on LOW and under reduced motion.
+
+**Performance:**
+
+- Draw calls: about 18.
+- Triangles: about 200 k on HIGH; LOW draws one render of about 138 k (16 calls).
+- DPR caps: 1.5 HIGH, 1.25 MEDIUM, 1 LOW.
+- Tree density: ×0.72 MEDIUM, ×0.42 LOW, and ×0.65 on narrow screens.
+- LOW idle renders 0 frames, and reverse-scroll frames are pixel-identical.
+- Render coordinator id `city-map`, priority 2.4. Rendering is on demand while near (900 px) and continuous only when allowed.
+- Lazy chunk: 22.6 KB gz.
+- `/` initial JS: +0.9 KB gz.
+
+**Fallback:** `?map3d=off|low|medium|high`. The SVG is used for Save-Data or ≤ 2 GB memory, no WebGL2, an error boundary, or context loss.
+
+**Note for QA:** headless screenshot scripts must delete their Chrome profiles. 120 leftover profiles (about 12 GB) filled the system drive once.
