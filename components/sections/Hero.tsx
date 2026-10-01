@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { RENDER_PRIORITY, useRenderSlot } from "@/components/three/renderCoordinator";
+import { hasWebGL2 } from "@/components/three/journey/utils/browser";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -29,9 +31,12 @@ export default function Hero() {
   const [ready, setReady] = useState(false);
   const [inView, setInView] = useState(true);
   const [dived, setDived] = useState(false);
+  // Render зохицуулагч: Hero хамгийн өндөр priority — шумбаж байх хооронд Journey 3D хүлээнэ
+  const heroAllowed = useRenderSlot("hero-water", RENDER_PRIORITY.heroWater, inView && !dived);
 
   useEffect(() => {
-    setWebgl({ reduced: window.matchMedia("(prefers-reduced-motion: reduce)").matches });
+    // WebGL2 байхгүй бол canvas үүсгэхгүй (үүсгэвэл R3F алдаа шидэж хуудсыг унагана) — HTML гарчиг хэвээр харагдана
+    if (hasWebGL2()) setWebgl({ reduced: window.matchMedia("(prefers-reduced-motion: reduce)").matches });
     // Дэлгэцээс гарвал WebGL-ийг зогсооно
     const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting));
     io.observe(root.current!);
@@ -88,7 +93,7 @@ export default function Hero() {
       >
         {webgl && (
           <div aria-hidden className={`pointer-events-none absolute inset-0 transition-opacity duration-[1200ms] ${ready ? "opacity-100" : "opacity-0"}`}>
-            <HeroWater title={title} dive={dive} reduced={webgl.reduced} running={inView && !dived} onReady={() => setReady(true)} />
+            <HeroWater title={title} dive={dive} reduced={webgl.reduced} running={heroAllowed} onReady={() => setReady(true)} />
           </div>
         )}
 

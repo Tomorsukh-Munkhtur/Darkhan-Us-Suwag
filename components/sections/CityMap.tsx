@@ -5,11 +5,15 @@ import { AnimatePresence, motion } from "framer-motion";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { cityFlow, outages, type CityStep } from "@/lib/content";
+import CityMap3D from "@/components/three/citymap/CityMap3D";
+import { createCityRuntime } from "@/components/three/citymap/runtime";
 import DarkhanMap from "./map/DarkhanMap";
 
 gsap.registerPlugin(ScrollTrigger);
 
 const N = cityFlow.length;
+/** 3D газрын зургийн засварын тэмдэг (SVG-тэй ижил mapPoint) — тогтмол reference */
+const OUTAGE_3D = outages[0] ? { x: outages[0].mapPoint.x, y: outages[0].mapPoint.y, area: outages[0].area } : null;
 const PIN = 250; // pin-ий scroll урт, дэлгэцийн өндрийн %
 const STEP = (PIN * 0.9) / (N - 1); // алхам хоорондын scroll (vh); сүүлийн 10% нь эцсийн төлөвийг барина
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -90,8 +94,15 @@ function StepCard({ s, i, compact = false }: { s: CityStep; i: number; compact?:
 export default function CityMap() {
   const root = useRef<HTMLElement>(null);
   const [active, setActive] = useState(0);
+  // 3D газрын зураг: pin-ий progress-ийг шууд уншина (React re-render-гүй); бэлэн болоход SVG давхарга нуугдана
+  const [rt] = useState(createCityRuntime);
+  const [live3d, setLive3d] = useState(false);
 
   useEffect(() => {
+    const toScene = (self: ScrollTrigger) => {
+      rt.progress = self.progress;
+      rt.invalidate();
+    };
     const ctx = gsap.context(() => {
       gsap
         .timeline({
@@ -102,7 +113,11 @@ export default function CityMap() {
             pin: true,
             scrub: 0.5,
             invalidateOnRefresh: true,
-            onUpdate: (self) => setActive(Math.min(N - 1, Math.floor(Math.min(self.progress / 0.9, 1) * (N - 1) + 0.001))),
+            onRefresh: toScene,
+            onUpdate: (self) => {
+              toScene(self);
+              setActive(Math.min(N - 1, Math.floor(Math.min(self.progress / 0.9, 1) * (N - 1) + 0.001)));
+            },
           },
         })
         .fromTo(".spine-fill", { scaleY: 0 }, { scaleY: 1, ease: "none", duration: 0.9 }, 0)
@@ -123,7 +138,7 @@ export default function CityMap() {
       );
     }, root);
     return () => ctx.revert();
-  }, []);
+  }, [rt]);
 
   const f = focus[active];
   const cam: React.CSSProperties = f
@@ -148,8 +163,12 @@ export default function CityMap() {
       ))}
 
       <div className="map-stage relative h-[100svh] min-h-[600px] overflow-hidden">
-        {/* газрын зураг: cover + камер */}
-        <div className="pointer-events-none absolute left-1/2 top-1/2 aspect-[16/9] w-[max(100%,calc(100svh*16/9))] -translate-x-1/2 -translate-y-1/2">
+        {/* газрын зураг: cover + камер (SVG — 3D бэлэн болох хүртэл ба fallback) */}
+        <div
+          className={`pointer-events-none absolute left-1/2 top-1/2 aspect-[16/9] w-[max(100%,calc(100svh*16/9))] -translate-x-1/2 -translate-y-1/2 transition-opacity duration-700 ${
+            live3d ? "invisible opacity-0" : "opacity-100"
+          }`}
+        >
           <div
             className="absolute inset-0 transition-[transform,transform-origin] duration-[1600ms] ease-[cubic-bezier(.22,1,.36,1)] [--vx:0.2] [--vy:-0.08] lg:[--vx:-0.26] lg:[--vy:0.06]"
             style={cam}
@@ -157,6 +176,8 @@ export default function CityMap() {
             <DarkhanMap active={active} className="h-full w-full" />
           </div>
         </div>
+        {/* 3D хот: алхам/progress-оор удирдагдана, UI ба бүрхүүлийн ард */}
+        <CityMap3D rt={rt} onLive={setLive3d} outage={OUTAGE_3D} />
 
         {/* уншигдахуйц байлгах бүрхүүл */}
         <div className="pointer-events-none absolute inset-x-0 top-0 h-60 bg-gradient-to-b from-foam via-foam/75 to-transparent" />
