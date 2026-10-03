@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="mn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Office Menu</title>
+<link href="fonts/fonts.css" rel="stylesheet">
+<style>
+  /* ===== Өнгөний хувилбарууд: <body class="dark"> эсвэл <body class="light"> ===== */
+  :root {
+    --bg: #121212;
+    --panel: #1b1b1b;
+    --ink: #f1ece2;
+    --muted: #a39d92;
+    --gold: #c9a35b;
+    --gold-soft: rgba(201,163,91,.35);
+  }
+  body.light {
+    --bg: #f6f1e7;
+    --panel: #efe7d8;
+    --ink: #1d1b18;
+    --muted: #6f675b;
+    --gold: #9c7a3c;
+    --gold-soft: rgba(156,122,60,.35);
+  }
+
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #555; }
+  body {
+    font-family: "Montserrat", sans-serif;
+    color: var(--ink);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    width: 210mm;
+    height: 297mm;
+    margin: 10mm auto;
+    background: var(--bg);
+    position: relative;
+    overflow: hidden;
+    padding: 20mm 18mm 18mm;
+    display: flex;
+    flex-direction: column;
+    page-break-after: always;
+    break-after: page;
+  }
+  @media print {
+    html, body { background: none; }
+    .page { margin: 0; }
+  }
+
+  /* нимгэн алтан хүрээ */
+  .page::before {
+    content: "";
+    position: absolute;
+    inset: 8mm;
+    border: .35mm solid var(--gold-soft);
+    pointer-events: none;
+  }
+  .page::after {
+    content: "";
+    position: absolute;
+    inset: 9.5mm;
+    border: .2mm solid var(--gold-soft);
+    pointer-events: none;
+  }
+
+  /* ===== Толгой ===== */
+  .head { text-align: center; margin-bottom: 9mm; }
+  .head .brand {
+    font-size: 7pt; letter-spacing: .45em; text-transform: uppercase; color: var(--muted);
+  }
+  .head h1 {
+    font-family: "Playfair Display", "PT Serif", serif; font-weight: 500;
+    font-size: 30pt; letter-spacing: .06em; text-transform: uppercase;
+    margin-top: 3mm; line-height: 1.05;
+  }
+  .head .mn {
+    font-family: "Playfair Display", "PT Serif", serif; font-style: italic;
+    color: var(--gold); font-size: 13pt; margin-top: 1.5mm;
+  }
+  .orn { display: flex; align-items: center; justify-content: center; gap: 3mm; margin-top: 4mm; color: var(--gold); }
+  .orn i { display: block; width: 22mm; height: .3mm; background: var(--gold); }
+  .orn b { display: block; width: 2mm; height: 2mm; transform: rotate(45deg); border: .3mm solid var(--gold); }
+
+  h2 {
+    font-family: "Playfair Display", "PT Serif", serif; font-weight: 500;
+    font-size: 15pt; letter-spacing: .12em; text-transform: uppercase;
+    display: flex; align-items: baseline; gap: 3mm;
+    margin-bottom: 4mm;
+  }
+  h2 small {
+    font-family: "Playfair Display", "PT Serif", serif; font-style: italic; text-transform: none;
+    letter-spacing: 0; font-size: 11pt; color: var(--gold); font-weight: 400;
+  }
+  h2::after { content: ""; flex: 1; height: .25mm; background: var(--gold-soft); align-self: center; }
+  h2 .p { order: 3; font-family: "Montserrat"; font-size: 12pt; color: var(--gold); letter-spacing: .04em; font-weight: 500; }
+
+  /* ===== Хоолны мөр ===== */
+  .item { display: grid; grid-template-columns: 1fr auto; column-gap: 4mm; margin-bottom: 3.6mm; break-inside: avoid; }
+  .item .en { font-weight: 500; font-size: 9.6pt; letter-spacing: .02em; }
+  .item .mn { grid-column: 1 / -1; font-size: 8.3pt; color: var(--muted); font-weight: 300; margin-top: .6mm; line-height: 1.35; }
+  .item .price { font-family: "Playfair Display", "PT Serif", serif; font-size: 11pt; color: var(--gold); white-space: nowrap; align-self: start; }
+  .item .lead { display: flex; align-items: baseline; gap: 2mm; }
+  .item .lead::after { content: ""; flex: 1; border-bottom: .25mm dotted var(--gold-soft); transform: translateY(-1mm); }
+  .tight .item { margin-bottom: 2.6mm; }
+
+  .chili { display: inline-block; width: 3.4mm; height: 3.4mm; vertical-align: -.5mm; margin-left: 1mm; }
+  .chili { fill: #c8452d; }
+  .note { font-size: 7.4pt; color: var(--muted); font-style: italic; text-align: center; margin-top: auto; padding-top: 3mm; letter-spacing: .03em; }
+  .note .chili { width: 3mm; height: 3mm; }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; column-gap: 10mm; }
+  .box {
+    border: .3mm solid var(--gold-soft); padding: 6mm 6mm 3mm; position: relative; background: var(--panel);
+  }
+  .box .tag {
+    position: absolute; top: -2.6mm; left: 50%; transform: translateX(-50%);
+    background: var(--bg); padding: 0 3mm; font-size: 6.8pt; letter-spacing: .3em; text-transform: uppercase; color: var(--gold);
+    white-space: nowrap;
+  }
+  .section { margin-bottom: 8mm; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 2mm; justify-content: center; }
+  .chips span {
+    border: .25mm solid var(--gold-soft); padding: 1.4mm 3mm; border-radius: 10mm;
+    font-size: 7.8pt; letter-spacing: .02em;
+  }
+  .chips span em { font-style: normal; color: var(--muted); font-weight: 300; }
+
+  /* ===== Нүүр ===== */
+  .cover { justify-content: center; align-items: center; text-align: center; padding: 0; }
+  .cover .tagline { font-family: "Playfair Display", "PT Serif", serif; font-style: italic; color: var(--gold); font-size: 14pt; letter-spacing: .04em; }
+  .cover .logo { margin: 14mm 0 10mm; }
+  .cover .the { font-size: 11pt; letter-spacing: 1.2em; padding-left: 1.2em; color: var(--muted); }
+  .cover .office { font-family: "Playfair Display", "PT Serif", serif; font-weight: 500; font-size: 66pt; letter-spacing: .14em; padding-left: .14em; line-height: 1; margin: 3mm 0 4mm; }
+  .cover .lb { font-size: 10pt; letter-spacing: .7em; padding-left: .7em; color: var(--gold); }
+  .cover .mono {
+    width: 30mm; height: 30mm; border: .4mm solid var(--gold); transform: rotate(45deg);
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 16mm;
+  }
+  .cover .mono span { transform: rotate(-45deg); font-family: "Playfair Display", "PT Serif", serif; font-size: 22pt; color: var(--gold); letter-spacing: .05em; }
+  .cover .soft { margin-top: 18mm; font-size: 8pt; letter-spacing: .5em; padding-left: .5em; text-transform: uppercase; }
+  .cover .date { margin-top: 2mm; font-family: "Playfair Display", "PT Serif", serif; font-style: italic; color: var(--muted); font-size: 10pt; }
+
+  /* ===== Ундааны хүснэгт ===== */
+  table.drinks { width: 100%; border-collapse: collapse; font-size: 8.8pt; }
+  table.drinks th { font-weight: 500; font-size: 6.8pt; letter-spacing: .25em; text-transform: uppercase; color: var(--gold); text-align: right; padding-bottom: 1.5mm; }
+  table.drinks th:first-child { text-align: left; }
+  table.drinks td { padding: 1.35mm 0; border-bottom: .2mm solid var(--gold-soft); }
+  table.drinks td.n { text-align: right; font-family: "Playfair Display", "PT Serif", serif; font-size: 10pt; color: var(--gold); width: 18mm; }
+  table.drinks td .v { color: var(--muted); font-weight: 300; font-size: 7.6pt; margin-left: 1.5mm; }
+  table.drinks tr:last-child td { border-bottom: 0; }
+  .dash { color: var(--muted) !important; opacity: .6; }
+
+  .wine .item .en span { color: var(--muted); font-weight: 400; font-size: 7.4pt; letter-spacing: .14em; margin-left: 1.5mm; }
+
+  .platter { break-inside: avoid; }
+  .platter .ppl { font-size: 7pt; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); margin-top: .8mm; }
+  .platter ul { list-style: none; margin-top: 3mm; columns: 2; column-gap: 6mm; }
+  .platter li { font-size: 7.9pt; line-height: 1.35; margin-bottom: 1.6mm; break-inside: avoid; padding-left: 3mm; position: relative; }
+  .platter li::before { content: ""; position: absolute; left: 0; top: 1.6mm; width: 1.1mm; height: 1.1mm; transform: rotate(45deg); background: var(--gold); }
+  .platter li em { display: block; font-style: normal; color: var(--muted); font-weight: 300; font-size: 7.4pt; }
+  .platter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8mm 8mm; }
+  .platter-grid .platter ul { columns: 1; }
+
+  .foot { margin-top: auto; text-align: center; font-size: 6.6pt; letter-spacing: .4em; color: var(--muted); text-transform: uppercase; padding-top: 4mm; }
+
+  /* ===== Хуудсан дээр агуулгыг жигд тараах ===== */
+  body { font-variant-numeric: lining-nums; }
+  .page > .section, .page > .box, .page > .cols, .page > .platter-grid { margin-top: auto; margin-bottom: auto; }
+  .page > .head + * { margin-top: 0; }
+  .note, .foot { margin-top: 0 !important; }
+  .page .item { margin-bottom: 4.4mm; }
+  .page .tight .item { margin-bottom: 3mm; }
+  .spirits table.drinks td { padding: 2.4mm 0; font-size: 9.4pt; }
+  .spirits .section { margin-bottom: 11mm; }
+  .smoker .platter-grid { flex: 1; align-content: space-evenly; margin: 0; }
+  .smoker .platter li { font-size: 8.8pt; margin-bottom: 2.4mm; }
+  .smoker .platter li em { font-size: 8pt; }
+  .wine table.drinks td { padding: 1.8mm 0; }
+</style>
+</head>
+<body class="dark">
+
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="chili" viewBox="0 0 24 24"><path d="M17.8 3.2c-.3-.5-1-.6-1.4-.2-.4.3-.5.9-.2 1.3.4.6.5 1.2.3 1.8-1.8-.6-3.9.2-4.9 1.9L7.4 15c-1.2 2-3 3.2-5 3.6-.5.1-.8.6-.6 1.1.4 1.3 2.6 2.4 5.6 1.9 4.4-.7 8.6-4.4 10.2-8.6.8-2.1.7-4.2-.4-5.6.9-1.3 1-3 .1-4.4l.5.2z"/></symbol>
+</svg>
+
+<!-- ============ 1. НҮҮР ============ -->
+<section class="page cover">
+  <div class="mono"><span>TO</span></div>
+  <div class="tagline">Feel The Difference</div>
+  <div class="logo">
+    <div class="the">THE</div>
+    <div class="office">OFFICE</div>
+    <div class="lb">LOUNGE &amp; BAR</div>
+  </div>
+  <div class="orn"><i></i><b></b><i></i></div>
+  <div class="soft">Soft Opening Menu</div>
+  <div class="date">October 2026</div>
+</section>
+
+<!-- ============ 2. ШОРЛОГ ============ -->
+<section class="page">
+  <div class="head">
+    <div class="brand">The Office · Lounge &amp; Bar</div>
+    <h1>Skewers</h1>
+    <div class="mn">Шорлог</div>
+    <div class="orn"><i></i><b></b><i></i></div>
+  </div>
+
+  <div class="box section">
+    <span class="tag">Signature set · Шорлогийн багц</span>
+    <h2>Skewer Set <small>Шорлогийн багц</small><span class="p">35,500₮</span></h2>
+    <div class="cols tight">
+      <div>
+        <div class="item"><div class="en">Mongolian lamb skewer</div><div class="mn">Монгол маягийн хонины махан шорлог</div></div>
+        <div class="item"><div class="en">Chinese spicy lamb skewer<svg class="chili"><use href="#chili"/></svg></div><div class="mn">Хятад маягийн хуурай халуун ногоотой хонины махан шорлог</div></div>
+        <div class="item"><div class="en">Russian shashlik</div><div class="mn">Орос маягийн хонины махан шорлог</div></div>
+        <div class="item"><div class="en">Garlic chili chicken skewer<svg class="chili"><use href="#chili"/></svg></div><div class="mn">Сармис, чинжүүтэй тахианы махан шорлог</div></div>
+        <div class="item"><div class="en">Honey garlic chicken skewer</div><div class="mn">Зөгийн бал, сармистай тахианы махан шорлог</div></div>
+        <div class="item"><div class="en">Brazilian beef skewer</div><div class="mn">Бразил маягийн үхрийн махан шорлог</div></div>
+        <div class="item"><div class="en">Garlic marinated beef skewer</div><div class="mn">Сармисаар амталсан үхрийн махан шорлог</div></div>
+      </div>
+      <div>
+        <div class="item"><div class="en">Spicy pork skewer<svg class="chili"><use href="#chili"/></svg></div><div class="mn">Халуун ногоотой гахайн махан шорлог</div></div>
+        <div class="item"><div class="en">Balsamic pork skewer</div><div class="mn">Бальзамик сүмсээр амталсан гахайн махан шорлог</div></div>
+        <div class="item"><div class="en">Liver &amp; lamb tail skewer</div><div class="mn">Элэг сүүлтэй уламжлалт шорлог</div></div>
+        <div class="item"><div class="en">Turkish red onion</div><div class="mn">Турк маягаар амталсан ягаан сонгино</div></div>
+        <div class="item"><div class="en">Korean spicy green onion<svg class="chili"><use href="#chili"/></svg></div><div class="mn">Солонгос маягийн халуун ногоотой ногоон сонгино</div></div>
+        <div class="item"><div class="en">Whole wheat bread</div><div class="mn">Хар талх</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div class="section">
+      <h2>À la carte <small>Дангаар</small></h2>
+      <div class="item"><div class="en lead">Skewer, any kind</div><div class="price">3,000₮</div><div class="mn">Шорлог, дурын төрлөөс · 1 ширхэг</div></div>
+    </div>
+    <div class="section">
+      <h2>Sides <small>Хачир</small></h2>
+      <div class="item"><div class="en lead">Baked potato</div><div class="price">2,500₮</div><div class="mn">Жигнэсэн төмс</div></div>
+      <div class="item"><div class="en lead">Turkish red onion</div><div class="price">2,500₮</div><div class="mn">Турк маягаар амталсан ягаан сонгино</div></div>
+      <div class="item"><div class="en lead">Korean spicy green onion<svg class="chili"><use href="#chili"/></svg></div><div class="price">2,500₮</div><div class="mn">Солонгос маягийн ногоон сонгино</div></div>
+      <div class="item"><div class="en lead">Steamed rice</div><div class="price">2,500₮</div><div class="mn">Агшаасан будаа</div></div>
+      <div class="item"><div class="en lead">Whole wheat bread</div><div class="price">2,000₮</div><div class="mn">Хар талх</div></div>
+    </div>
+  </div>
+
+  <div class="note"><svg class="chili"><use href="#chili"/></svg> Халуун ногоотой · Spicy</div>
+</section>
+
+<!-- ============ 3. ХАЛУУН ТОГОО ============ -->
+<section class="page">
+  <div class="head">
+    <div class="brand">The Office · Lounge &amp; Bar</div>
+    <h1>Hot Pot</h1>
+    <div class="mn">Халуун тогоо</div>
+    <div class="orn"><i></i><b></b><i></i></div>
+  </div>
+
+  <div class="box section">
+    <span class="tag">Step 1 · Шөлөө сонгох</span>
+    <h2>Soup Base <small>Суурь шөл</small><span class="p">8,500₮</span></h2>
+    <div class="cols tight">
+      <div>
+        <div class="item"><div class="en">Plain broth</div><div class="mn">Ясны шөл</div></div>
+        <div class="item"><div class="en">Mushroom</div><div class="mn">Мөөгтэй шөл</div></div>
+      </div>
+      <div>
+        <div class="item"><div class="en">Spicy<svg class="chili"><use href="#chili"/></svg></div><div class="mn">Халуун ногоотой шөл</div></div>
+        <div class="item"><div class="en">Tomato</div><div class="mn">Улаан лоолийн шөл</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Ingredients <small>Step 2 · Орц</small></h2>
+    <div class="cols">
+      <div>
+        <div class="item"><div class="en lead">Beef</div><div class="price">9,500₮</div><div class="mn">Үхрийн сээрний зорсон мах</div></div>
+        <div class="item"><div class="en lead">Lamb</div><div class="price">8,000₮</div><div class="mn">Хонины гуяны зорсон мах</div></div>
+        <div class="item"><div class="en lead">Lamb tail</div><div class="price">7,000₮</div><div class="mn">Хонины сүүл</div></div>
+        <div class="item"><div class="en lead">Meatballs</div><div class="price">7,000₮</div><div class="mn">Бөөрөнхий мах</div></div>
+        <div class="item"><div class="en lead">Dumplings</div><div class="price">7,000₮</div><div class="mn">Банш</div></div>
+      </div>
+      <div>
+        <div class="item"><div class="en lead">Noodles</div><div class="price">5,500₮</div><div class="mn">Гурил · энгийн, бүхэл буудайн</div></div>
+        <div class="item"><div class="en lead">Rice noodles</div><div class="price">5,000₮</div><div class="mn">Нарийн пүнтүүз</div></div>
+        <div class="item"><div class="en lead">Mushroom selection</div><div class="price">7,000₮</div><div class="mn">Мөөгний цуглуулга</div></div>
+        <div class="item"><div class="en lead">Vegetable selection</div><div class="price">5,000₮</div><div class="mn">Ногооны цуглуулга</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section" style="text-align:center">
+    <h2>Condiments <small>Step 3 · Амтлагч</small></h2>
+    <div class="chips">
+      <span>Sesame paste <em>· Мажан</em></span>
+      <span>Soy sauce <em>· Цуу</em></span>
+      <span>Pickled garlic <em>· Дарсан сармис</em></span>
+      <span>Green chili <em>· Ногоон чинжүү</em></span>
+      <span>Green onion <em>· Ногоон сонгино</em></span>
+      <span>Parsley <em>· Яншуй</em></span>
+    </div>
+  </div>
+
+  <div class="note"><svg class="chili"><use href="#chili"/></svg> Халуун ногоотой · Spicy</div>
+</section>
+
+<!-- ============ 4. САЛАД · ПАСТА · ХАЧИР ============ -->
+<section class="page">
+  <div class="head">
+    <div class="brand">The Office · Lounge &amp; Bar</div>
+    <h1>Kitchen</h1>
+    <div class="mn">Салад · Паста · Хачир</div>
+    <div class="orn"><i></i><b></b><i></i></div>
+  </div>
+
+  <div class="section">
+    <h2>Salads <small>Салад</small></h2>
+    <div class="item"><div class="en lead">Argentine-style beef tongue salad</div><div class="price">35,000₮</div><div class="mn">Аргентин маягийн үхрийн хэлэн салад</div></div>
+    <div class="item"><div class="en lead">Asian green salad</div><div class="price">20,000₮</div><div class="mn">Ази маягийн ногооны салад</div></div>
+    <div class="item"><div class="en lead">Cucumber &amp; tomato salad</div><div class="price">15,000₮</div><div class="mn">Өргөст хэмх, улаан лоолийн салад</div></div>
+  </div>
+
+  <div class="section">
+    <h2>Pastas <small>Паста</small></h2>
+    <div class="item"><div class="en lead">One-pot lasagna pie <span style="color:var(--gold);font-size:7pt;letter-spacing:.15em">· 2–4 PPL</span></div><div class="price">60,000₮</div><div class="mn">Хайруулын тавган дээрх лазанья пай · 2–4 хүн</div></div>
+    <div class="item"><div class="en lead">Mushroom linguine</div><div class="price">25,500₮</div><div class="mn">4 төрлийн мөөгтэй лингвини паста</div></div>
+    <div class="item"><div class="en lead">Creamy chicken penne</div><div class="price">25,500₮</div><div class="mn">Өтгөн цөцгийн сүмстэй, тахианы махтай пенне паста</div></div>
+  </div>
+
+  <div class="section">
+    <h2>Side Dishes <small>Хачир</small></h2>
+    <div class="item"><div class="en lead">Fried rice</div><div class="price">15,500₮</div><div class="mn">Амталсан хуурган будаа</div></div>
+    <div class="item"><div class="en lead">Potato wedges with sausage</div><div class="price">21,000₮</div><div class="mn">Зайдастай шарсан төмс</div></div>
+  </div>
+
+  <div class="foot">Feel The Difference</div>
+</section>
+
+<!-- ============ 5. PLATTERS I ============ -->
+<section class="page">
+  <div class="head">
+    <div class="brand">The Office · Lounge &amp; Bar</div>
+    <h1>Platters</h1>
+    <div class="mn">Хамт хуваалцах таваг</div>
+    <div class="orn"><i></i><b></b><i></i></div>
+  </div>
+
+  <div class="box section platter">
+    <span class="tag">For the table · Ширээгээрээ</span>
+    <h2>Pulled Pork Taco Bar <span class="p">180,000₮</span></h2>
+    <div class="mn" style="font-family:'Playfair Display','PT Serif';font-style:italic;color:var(--gold);font-size:10.5pt">Мексик маягийн гахайн махан тако бар</div>
+    <div class="ppl">6–8 persons · 6–8 хүн</div>
+    <ul>
+      <li>Marinated pulled pork<em>Амталсан гахайн хүзүүний мах</em></li>
+      <li>Corn tortilla<em>Эрдэнэ шишийн бин</em></li>
+      <li>Pico de gallo<em>Улаан лоолийн шинэхэн дүрлэг</em></li>
+      <li>Sour cream dip<em>Өтгөн зөөхийн дүрлэг</em></li>
+      <li>Sliced avocado<em>Хэрчсэн авокадо</em></li>
+      <li>Shredded cheddar<em>Чеддар бяслаг</em></li>
+      <li>Baked beans<em>Жигнэсэн шош</em></li>
+      <li>Pickled corn<em>Амталсан эрдэнэ шиш</em></li>
+      <li>Shredded iceberg<em>Айсберг навч</em></li>
+      <li>Red onion<em>Ягаан сонгино</em></li>
+      <li>Lime wedges<em>Лайм</em></li>
+    </ul>
+  </div>
+
+  <div class="box section platter">
+    <span class="tag">Sizzling · Шижигнэсэн</span>
+    <h2>Chicken Fajita <span class="p">150,000₮</span></h2>
+    <div class="mn" style="font-family:'Playfair Display','PT Serif';font-style:italic;color:var(--gold);font-size:10.5pt">Тахианы махан фахита</div>
+    <div class="ppl">5–6 persons · 5–6 хүн</div>
+    <ul>
+      <li>Marinated chicken breast<em>Амталсан тахианы цээж мах</em></li>
+      <li>Red, yellow &amp; green peppers<em>Олон өнгийн амтат чинжүү</em></li>
+      <li>Corn tortilla<em>Эрдэнэ шишийн бин</em></li>
+      <li>Pico de gallo<em>Улаан лоолийн шинэхэн дүрлэг</em></li>
+      <li>Sour cream dip<em>Өтгөн зөөхийн дүрлэг</em></li>
+      <li>Sliced avocado<em>Хэрчсэн авокадо</em></li>
+      <li>Shredded cheddar<em>Чеддар бяслаг</em></li>
+      <li>Lime wedges<em>Лайм</em></li>
+    </ul>
+  </div>
+
+  <div class="foot">Feel The Difference</div>
+</section>
+
+<!-- ============ 6. PLATTERS II ============ -->
+<section class="page smoker">
+  <div class="head">
+    <div class="brand">The Office · Lounge &amp; Bar</div>
+    <h1>From the Smoker</h1>
+    <div class="mn">Утсан ба удаан болгосон мах</div>
+    <div class="orn"><i></i><b></b><i></i></div>
+  </div>
+
+  <div class="platter-grid">
+    <div class="platter">
+      <h2 style="font-size:12pt">Pork Knuckle</h2>
+      <div class="item" style="margin-bottom:0"><div class="en lead" style="font-size:8.6pt;color:var(--muted)">Sous vide · 3–4 хүн</div><div class="price">95,000₮</div></div>
+      <div class="mn" style="font-size:8.3pt;color:var(--muted)">Sous vide аргаар болгосон гахайн тагалцаг</div>
+      <ul>
+        <li>Red cabbage salad<em>Ягаан байцааны салад</em></li>
+        <li>Baked potato<em>Жигнэсэн төмс</em></li>
+        <li>Honey mustard sauce<em>Зөгийн балтай гичийн сүмс</em></li>
+        <li>Parmesan &amp; butter<em>Пармезан бяслаг, цөцгийн тос</em></li>
+      </ul>
+    </div>
+    <div class="platter">
+      <h2 style="font-size:12pt">Texas Pork Ribs</h2>
+      <div class="item" style="margin-bottom:0"><div class="en lead" style="font-size:8.6pt;color:var(--muted)">Spare ribs · 2–3 хүн</div><div class="price">75,000₮</div></div>
+      <div class="mn" style="font-size:8.3pt;color:var(--muted)">Техас маягийн гахайн хавирга</div>
+      <ul>
+        <li>Coleslaw<em>Байцааны салад</em></li>
+        <li>Baked potato wedges<em>Жигнэсэн төмс</em></li>
+        <li>Ranch sauce<em>Ранч сүмс</em></li>
+      </ul>
+    </div>
+    <div class="platter">
+      <h2 style="font-size:12pt">BBQ Beef Brisket</h2>
+      <div class="item" style="margin-bottom:0"><div class="en lead" style="font-size:8.6pt;color:var(--muted)">2 хүн</div><div class="price">75,000₮</div></div>
+      <div class="mn" style="font-size:8.3pt;color:var(--muted)">Барбекю сүмстэй үхрийн өвчүү</div>
+      <ul>
+        <li>Asian green salad<em>Ази маягийн ногоон салад</em></li>
+        <li>Steamed vegetables<em>Жигнэсэн ногоо</em></li>
+        <li>Ranch sauce<em>Ранч сүмс</em></li>
+      </ul>
+    </div>
+    <div class="platter">
+      <h2 style="font-size:12pt">BBQ Beef Ribs</h2>
+      <div class="item" style="margin-bottom:0"><div class="en lead" style="font-size:8.6pt;color:var(--muted)">2 хүн</div><div class="price">75,000₮</div></div>
+      <div class="mn" style="font-size:8.3pt;color:var(--muted)">Барбекю сүмстэй үхрийн хавирга</div>
+      <ul>
+        <li>Asian green salad<em>Ази маягийн ногоон салад</em></li>
+        <li>Steamed vegetables<em>Жигнэсэн ногоо</em></li>
+        <li>Ranch sauce<em>Ранч сүмс</em></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="foot">Feel The Difference</div>
+</section>
+
+<!-- ============ 7. SPIRITS ============ -->
+<section class="page spirits">
+  <div class="head">
+    <div class="brand">The Office · Lounge &amp; Bar</div>
+    <h1>Spirits</h1>
+    <div class="mn">Согтууруулах ундаа</div>
+    <div class="orn"><i></i><b></b><i></i></div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <div class="section">
+        <h2 style="font-size:12pt">Vodka</h2>
+        <table class="drinks">
+          <tr><th></th><th>50 ml</th><th>Bottle</th></tr>
+          <tr><td>Eden<span class="v">700ml</span></td><td class="n">9,500</td><td class="n">95,000</td></tr>
+          <tr><td>Ice Tree<span class="v">750ml</span></td><td class="n">12,000</td><td class="n">120,000</td></tr>
+          <tr><td>Absolut Blue<span class="v">750ml</span></td><td class="n dash">—</td><td class="n">195,000</td></tr>
+          <tr><td>Finlandia<span class="v">700ml</span></td><td class="n">20,000</td><td class="n">210,000</td></tr>
+        </table>
+      </div>
+      <div class="section">
+        <h2 style="font-size:12pt">Gin</h2>
+        <table class="drinks">
+          <tr><th></th><th>50 ml</th><th>Bottle</th></tr>
+          <tr><td>Beefeater<span class="v">750ml</span></td><td class="n">13,000</td><td class="n">170,000</td></tr>
+          <tr><td>Barrister<span class="v">700ml</span></td><td class="n dash">—</td><td class="n">180,000</td></tr>
+          <tr><td>Gordon's<span class="v">750ml</span></td><td class="n">15,000</td><td class="n">190,000</td></tr>
+          <tr><td>Tanqueray<span class="v">750ml</span></td><td class="n dash">—</td><td class="n">210,000</td></tr>
+        </table>
+      </div>
+      <div class="section">
+        <h2 style="font-size:12pt">Cognac</h2>
+        <table class="drinks">
+          <tr><th></th><th>50 ml</th><th>Bottle</th></tr>
+          <tr><td>Hennessy VS<span class="v">700ml</span></td><td class="n dash">—</td><td class="n">500,000</td></tr>
+          <tr><td>Hennessy VSOP<span class="v">700ml</span></td><td class="n dash">—</td><td class="n">550,000</td></tr>
+        </table>
+      </div>
+    </div>
+    <div>
+      <div class="section">
+        <h2 style="font-size:12pt">Whiskey</h2>
+        <table class="drinks">
+          <tr><th></th><th>50 ml</th><th>Bottle</th></tr>
+          <tr><td>Ballantine's Finest<span class="v">750ml</span></td><td class="n">20,000</td><td class="n">230,000</td></tr>
+          <tr><td>Jack Daniel's No.7<span class="v">700ml</span></td><td class="n">25,000</td><td class="n">295,000</td></tr>
+          <tr><td>JD Blackberry<span class="v">700ml</span></td><td class="n dash">—</td><td class="n">295,000</td></tr>
+          <tr><td>JD Tennessee Honey<span class="v">700ml</span></td><td class="n dash">—</td><td class="n">295,000</td></tr>
+          <tr><td>Jameson<span class="v">700ml</span></td><td class="n">25,000</td><td class="n">295,000</td></tr>
+          <tr><td>Chivas Regal 12 YO<span class="v">700ml</span></td><td class="n">35,000</td><td class="n">320,000</td></tr>
+          <tr><td>Glenmorangie<span class="v">700ml</span></td><td class="n dash">—</td><td class="n">470,000</td></tr>
+        </table>
+      </div>
+      <div class="section">
+        <h2 style="font-size:12pt">Tequila</h2>
+        <table class="drinks">
+          <tr><th></th><th>50 ml</th><th>Bottle</th></tr>
+          <tr><td>Olmeca Reposado<span class="v">700ml</span></td><td class="n">12,000</td><td class="n">180,000</td></tr>
+          <tr><td>Olmeca Silver<span class="v">700ml</span></td><td class="n">15,000</td><td class="n">180,000</td></tr>
+          <tr><td>Jose Cuervo Silver<span class="v">750ml</span></td><td class="n dash">—</td><td class="n">250,000</td></tr>
+          <tr><td>Jose Cuervo Especial<span class="v">750ml</span></td><td class="n dash">—</td><td class="n">250,000</td></tr>
+          <tr><td>Don Julio Reposado<span class="v">750ml</span></td><td class="n dash">—</td><td class="n">480,000</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">Үнэ төгрөгөөр (₮) · Prices in MNT</div>
+</section>
+
+<!-- ============ 8. WINE · BEER · BEVERAGES ============ -->
+<section class="page">
+  <div class="head" style="margin-bottom:7mm">
+    <div class="brand">The Office · Lounge &amp; Bar</div>
+    <h1>Wine &amp; Beer</h1>
+    <div class="mn">Дарс · Шар айраг · Ундаа</div>
+    <div class="orn"><i></i><b></b><i></i></div>
+  </div>
+
+  <div class="cols wine">
+    <div>
+      <h2 style="font-size:11pt">Champagne</h2>
+      <div class="item"><div class="en lead">Brut Dargent <span>FRANCE</span></div><div class="price">110,000₮</div></div>
+
+      <h2 style="font-size:11pt;margin-top:4mm">White</h2>
+      <div class="item"><div class="en lead">Curly Sheep, Sauvignon Blanc <span>NZ</span></div><div class="price">120,000₮</div><div class="mn">Халуун орны хүчиллэг жимсний тааламжтай үнэр</div></div>
+      <div class="item"><div class="en lead">Azahara, Pinot Grigio <span>AUS</span></div><div class="price">110,000₮</div><div class="mn">Цагаан гаа, нимбэг, лийрийн хурц үнэр</div></div>
+      <div class="item"><div class="en lead">Luis Eschenauer, Chardonnay <span>FR</span></div><div class="price">80,000₮</div><div class="mn">Цэцэг, цөцгийн тос, халуун орны жимсний амт</div></div>
+      <div class="item"><div class="en lead">Hansbaer, Riesling <span>GER</span></div><div class="price">90,000₮</div><div class="mn">Сэргэг, бага зэрэг чихэрлэг</div></div>
+
+      <h2 style="font-size:11pt;margin-top:4mm">Rosé</h2>
+      <div class="item"><div class="en lead">Gallo Family, Zinfandel <span>USA</span></div><div class="price">90,000₮</div><div class="mn">Улаан жимс, бөөрөлзгөнө, царс модны үнэр</div></div>
+    </div>
+    <div>
+      <h2 style="font-size:11pt">Red</h2>
+      <div class="item"><div class="en lead">Dark Horse, Pinot Noir <span>USA</span></div><div class="price">120,000₮</div><div class="mn">Сарнай, лаванда, интоор, гүзээлзгэнийн амт</div></div>
+      <div class="item"><div class="en lead">Aetos, Cabernet Sauvignon <span>CHILE</span></div><div class="price">110,000₮</div><div class="mn">Бөөрөлзгөнө, чавганы анхилуун үнэр</div></div>
+      <div class="item"><div class="en lead">Norton Colección, Malbec <span>ARG</span></div><div class="price">130,000₮</div><div class="mn">Чавга, интоор, бага зэрэг халуун ногоо</div></div>
+      <div class="item"><div class="en lead">Deakin Estate, Shiraz <span>AUS</span></div><div class="price">100,000₮</div><div class="mn">Чавга, зефирийн анхилуун үнэр</div></div>
+
+      <h2 style="font-size:11pt;margin-top:4mm">Draft Beer <small>500ml</small></h2>
+      <table class="drinks">
+        <tr><td>Altan Gobi</td><td class="n">14,000</td></tr>
+        <tr><td>Kaltenberg</td><td class="n">14,000</td></tr>
+        <tr><td>Heineken</td><td class="n">15,000</td></tr>
+        <tr><td>Chinggis Pilsner</td><td class="n">17,000</td></tr>
+      </table>
+      <h2 style="font-size:11pt;margin-top:4mm">Bottled Beer <small>330ml</small></h2>
+      <table class="drinks">
+        <tr><td>Tsingtao</td><td class="n">15,000</td></tr>
+        <tr><td>Terra · Kirin Ichiban</td><td class="n">16,000</td></tr>
+        <tr><td>Corona</td><td class="n">17,000</td></tr>
+        <tr><td>Soju <span class="v">· төрлийг ажилтнаас асууна уу</span></td><td class="n">20,000</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="box" style="margin-top:6mm;padding:5mm 6mm 3mm">
+    <span class="tag">Beverages · Ус ундаа</span>
+    <div class="cols">
+      <table class="drinks">
+        <tr><td>Soft drinks <span class="v">Coke, Sprite, Fanta, Soda, Tonic</span></td><td class="n">7,500</td></tr>
+        <tr><td>Millenia mineral water <span class="v">Эрдэст ус</span></td><td class="n">7,500</td></tr>
+        <tr><td>Millenia sparkling <span class="v">Хийжүүлсэн ус</span></td><td class="n">7,500</td></tr>
+      </table>
+      <table class="drinks">
+        <tr><td>Juice <span class="v">Жимсний шүүс</span></td><td class="n">5,000</td></tr>
+        <tr><td>Tea <span class="v">Цай</span></td><td class="n">5,000</td></tr>
+        <tr><td colspan="2" style="font-size:7pt;color:var(--muted);font-style:italic">Төрлийг ажилтнаас асууна уу</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
