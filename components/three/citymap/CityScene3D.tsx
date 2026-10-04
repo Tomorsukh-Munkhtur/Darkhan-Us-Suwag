@@ -37,6 +37,7 @@ import {
   treeMaterial,
 } from "./materials";
 import { MAP_TIERS, type CityRuntime } from "./runtime";
+import { useCityPostFX } from "./postfx";
 
 const FOV = 32;
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
@@ -205,10 +206,10 @@ function treeGeometry(conifer: boolean) {
   // дээрээс харагддаггүй таг, суурийг хасна (triangle хэмнэлт)
   const parts = [tag(new THREE.CylinderGeometry(0.0035, 0.0055, 0.03, 4, 1, true).translate(0, 0.015, 0), 0)];
   if (conifer) {
-    parts.push(tag(new THREE.ConeGeometry(0.03, 0.085, 6, 1, true).translate(0, 0.06, 0), 1));
-    parts.push(tag(new THREE.ConeGeometry(0.021, 0.06, 6, 1, true).translate(0, 0.095, 0), 1));
+    parts.push(tag(new THREE.ConeGeometry(0.03, 0.085, 8, 1, true).translate(0, 0.06, 0), 1));
+    parts.push(tag(new THREE.ConeGeometry(0.021, 0.06, 8, 1, true).translate(0, 0.095, 0), 1));
   } else {
-    parts.push(tag(new THREE.IcosahedronGeometry(0.034, 0).scale(1, 1.12, 1).translate(0, 0.058, 0), 1));
+    parts.push(tag(new THREE.IcosahedronGeometry(0.034, 1).scale(1, 1.12, 1).translate(0, 0.058, 0), 1));
   }
   const g = mergeGeometries(parts, false)!;
   parts.forEach((x) => x.dispose());
@@ -260,6 +261,8 @@ function Stage({
   const cfg = MAP_TIERS[tier];
   const mobile = size.width < 1024;
   const density = cfg.density * (size.width < 700 ? 0.65 : 1);
+  // фото мэт эцсийн боловсруулалт (bloom, tone mapping, линз) — fx түвшинд (сул төхөөрөмж дээр шууд render)
+  useCityPostFX(cfg.fx, rt.reduced, 0);
 
   const repairW: P2 | null = useMemo(() => (outage ? svgToWorld(outage.x, outage.y) : null), [outage]);
 

@@ -186,7 +186,12 @@ export function terrainMaterial(U: CityUniforms) {
         float pads = min(min(length(q - P1) - 0.3, length(q - P2) - 0.3), length(q - RES) - ${f(RESERVOIR.r + 0.2)});
         col = mix(col, C_GRAVEL * (0.9 + 0.12 * n3), 1.0 - smoothstep(0.0, 0.05, pads));
         col = mix(col, C_CONC * (0.9 + 0.1 * n3), 1.0 - smoothstep(0.0, 0.03, rectD(q, R_PLANT)));
-        vec3 lit = shade(col, n);
+        // өвс, хөрсний нарийн бүтэц (ойроос харахад тэгш биш)
+        if (uDetail > 0.5) col *= 0.9 + 0.2 * vnoise(q * 64.0 + 1.3) * vnoise(q * 17.0 + 4.1);
+        vec3 lit = shade(col, n) * 0.82;
+        // шөнийн хотын гэрлийн тусгал: хорооллын эргэн тойронд газар дулаан, натрийн шаргал туяатай
+        float dCity = min(min(dOld, dNew), dInd);
+        lit += ${v3("#ff9a4a")} * 0.03 * (1.0 - smoothstep(-0.2, 1.4, dCity)) * (0.7 + 0.3 * n2);
         // эх үүсвэрийн бүс онцлогдох үед (1-р алхам) бүдэг cyan
         lit += C_CYAN * 0.035 * uWells * uEmph[0] * (1.0 - smoothstep(-0.05, 0.08, dSrc));
         gl_FragColor = vec4(applyFog(lit, vW), 1.0);
@@ -221,33 +226,46 @@ export function riverMaterial(U: CityUniforms) {
       varying vec2 vUv;
       ${NOISE}
       ${COMMON}
-      const vec3 W_DEEP = ${v3("#0e3456")};
-      const vec3 W_MID = ${v3("#195784")};
-      const vec3 W_SHALLOW = ${v3("#246a92")};
+      // шөнийн гол (фото мэт): бараан, гүн ус — өнгө нь голдуу тусгалаас (тэнгэр, сар, хотын гэрэл)
+      const vec3 W_DEEP = ${v3("#061827")};
+      const vec3 W_SHALLOW = ${v3("#0d2a40")};
+      const vec3 SKY_ZENITH = ${v3("#0c2238")};
+      const vec3 SKY_HORIZON = ${v3("#2a5274")};
+      const vec3 MOON = ${v3("#e6eeff")};
       const vec3 W_HI = ${v3("#8fdcff")};
-      const vec3 SKY_REFL = ${v3("#4a79a8")};
+      const mat2 ROT = mat2(0.8, 0.6, -0.6, 0.8);
+      float fbm2(vec2 p) { float a = vnoise(p); p = ROT * p * 2.03 + 5.1; a += vnoise(p) * 0.5; p = ROT * p * 2.01 + 2.7; return a + vnoise(p) * 0.25; }
       void main() {
         float s = vUv.x;
         float across = abs(vUv.y - 0.5) * ${f(RIVER_RIBBON_HALF * 2)};
         float flow = uPhase * 0.22 + uTime * 0.07;
-        float n1 = vnoise(vec2(s * 2.6 - flow * 2.6, vUv.y * 9.0));
-        float n2 = uDetail > 0.5 ? vnoise(vec2(s * 8.0 - flow * 5.5, vUv.y * 26.0 + 3.0)) : n1;
-        vec3 col = mix(W_DEEP, W_MID, 0.25 + 0.35 * n1);
-        col = mix(col, W_SHALLOW, smoothstep(0.1, 0.27, across) * 0.55);
+        // урсгалын дагуу сунасан долгион (хоёр давхар) → гадаргуугийн хэвийн вектор
+        vec2 p1 = vec2(s * 3.2 - flow * 3.0, vUv.y * 7.0);
+        vec2 p2 = vec2(s * 11.0 - flow * 6.5, vUv.y * 22.0 + 3.0);
+        float e = 0.09;
+        float h0 = fbm2(p1) + (uDetail > 0.5 ? 0.45 * vnoise(p2) : 0.0);
+        float hx = fbm2(p1 + vec2(e, 0.0)) + (uDetail > 0.5 ? 0.45 * vnoise(p2 + vec2(e * 3.4, 0.0)) : 0.0);
+        float hz = fbm2(p1 + vec2(0.0, e)) + (uDetail > 0.5 ? 0.45 * vnoise(p2 + vec2(0.0, e * 3.1)) : 0.0);
+        vec3 nw = normalize(vec3((h0 - hx) * 0.16, 1.0, (h0 - hz) * 0.16));
         vec3 v = normalize(cameraPosition - vW);
-        float fres = pow(1.0 - clamp(v.y, 0.0, 1.0), 3.0);
-        col += SKY_REFL * (0.12 + fres * 0.6);
-        float glint = smoothstep(0.78, 0.97, n1 * 0.45 + n2 * 0.55);
-        col += W_HI * glint * (0.22 + 0.12 * uEmph[0]);
-        col += W_HI * smoothstep(0.72, 0.96, n2) * 0.05;
-        // эргийн нимгэн хөөс, гүехэн ирмэг
-        float shore = 1.0 - smoothstep(0.0, 0.028, abs(across - 0.258));
-        col += W_HI * shore * (0.1 + 0.12 * n2);
-        // сарны мөр: хойноос туссан гэрлийн долгионт тусгал
-        vec3 nw = normalize(vec3((n1 - 0.5) * 0.16, 1.0, (n2 - 0.5) * 0.16));
-        vec3 rr = reflect(-v, nw);
-        float moon = pow(max(dot(rr, ${dirGlsl(0.12, 0.42, -0.9)}), 0.0), 36.0);
-        col += ${v3("#cfe2ff")} * moon * 0.4;
+        vec3 r = reflect(-v, nw);
+        // Fresnel (Schlick, ус ≈ 0.02): налуу харахад тэнгэрийн тусгал давамгайлна
+        float fres = 0.02 + 0.98 * pow(1.0 - clamp(dot(nw, v), 0.0, 1.0), 5.0);
+        vec3 body = mix(W_DEEP, W_SHALLOW, smoothstep(0.12, 0.27, across) * 0.7);
+        vec3 sky = mix(SKY_HORIZON, SKY_ZENITH, smoothstep(0.35, 0.98, r.y));
+        vec3 col = mix(body, sky, clamp(fres * 1.3 + 0.18, 0.0, 1.0));
+        float lane = vnoise(vec2(s * 0.8 - flow * 1.4, vUv.y * 34.0)) * vnoise(vec2(s * 2.3 - flow * 2.2, vUv.y * 13.0 + 7.0));
+        col += SKY_HORIZON * 0.22 * smoothstep(0.32, 0.75, lane);
+        // сарны гялтганасан мөр: долгионы налуу дээр хурц, сийрэг тусгал (HDR → туяарна)
+        float moon = pow(max(dot(r, ${dirGlsl(0.12, 0.42, -0.9)}), 0.0), 220.0);
+        col += MOON * moon * 2.4;
+        // жижиг гялтгануур: зөвхөн нарийн долгионы оройд (том толбо биш)
+        float spark = smoothstep(0.9, 0.99, vnoise(p2 * 2.3 - flow * 3.0) * 0.7 + vnoise(p2 * 5.1 + 9.0) * 0.3);
+        col += MOON * spark * pow(max(dot(r, ${dirGlsl(0.12, 0.42, -0.9)}), 0.0), 40.0) * 0.9;
+        // эргийн нойтон бараан зурвас
+        col *= mix(1.0, 0.7, smoothstep(0.235, 0.27, across));
+        // эх үүсвэрийн алхамд (1-р) бүдэг cyan гялбаа хадгална
+        col += W_HI * smoothstep(0.85, 0.98, vnoise(p2 * 1.9 - flow * 2.0)) * 0.08 * uEmph[0];
         gl_FragColor = vec4(applyFog(col, vW), 1.0);
         ${COLORSPACE}
       }
@@ -511,8 +529,13 @@ export function treeMaterial(U: CityUniforms) {
       varying vec3 vN;
       varying float vTint;
       varying float vPart;
+      varying float vH;
+      varying vec3 vRad;
       void main() {
         vec4 w = modelMatrix * instanceMatrix * vec4(position, 1.0);
+        vH = position.y;
+        // титмийн төвөөс гарах чиглэл: талсуудын хурц ирмэгийг зөөлрүүлж бөөрөнхий навч мэт гэрэлтүүлнэ
+        vRad = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * vec3(position.x, (position.y - 0.06) * 0.6, position.z));
         float sway = sin(uTime * 1.1 + w.x * 2.7 + w.z * 1.9) * 0.0035 * aPart * position.y * 12.0;
         w.x += sway;
         w.z += sway * 0.6;
@@ -528,12 +551,20 @@ export function treeMaterial(U: CityUniforms) {
       varying vec3 vN;
       varying float vTint;
       varying float vPart;
+      varying float vH;
+      varying vec3 vRad;
       ${NOISE}
       ${COMMON}
       void main() {
-        vec3 n = normalize(vN);
-        vec3 crown = mix(mix(${v3("#31563f")}, ${v3("#3d684b")}, step(0.45, vTint)), ${v3("#4d6542")}, step(0.85, vTint));
-        vec3 col = vPart > 0.5 ? crown * (0.8 + 0.35 * vnoise(vW.xz * 60.0 + vW.y * 40.0)) : ${v3("#3a2e25")};
+        vec3 n = normalize(mix(normalize(vN), normalize(vRad), vPart > 0.5 ? 0.7 : 0.0));
+        // шөнийн навч: бараан, өнгө нь мод бүрт өөр (заримд нь намрын шаргал)
+        vec3 crown = mix(mix(${v3("#22402d")}, ${v3("#2c4b35")}, step(0.45, vTint)), ${v3("#44502f")}, step(0.85, vTint));
+        // навчны бөөгнөрөл: хоёр хэмжээст noise → гэрэлтэй/сүүдэртэй толбо
+        float leaf = vnoise(vW.xz * 110.0 + vW.y * 90.0) * 0.55 + vnoise(vW.xz * 38.0 + vW.y * 29.0 + 3.0) * 0.45;
+        vec3 col = crown * (0.55 + 0.8 * leaf);
+        // титмийн доод хэсэг өөрийнхөө сүүдэрт
+        col *= mix(0.55, 1.08, smoothstep(0.03, 0.1, vH));
+        if (vPart < 0.5) col = ${v3("#2e241d")};
         gl_FragColor = vec4(applyFog(shade(col, n), vW), 1.0);
         ${COLORSPACE}
       }
