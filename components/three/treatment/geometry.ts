@@ -1,24 +1,11 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import {
-  BUILDING,
-  BUSHES,
-  CH_DIR,
-  CHANNEL,
-  G,
-  LAMPS,
-  OUTLET,
-  PLINTH,
-  RIVER,
-  TANK_L,
-  TANK_R,
-  type Tank,
-} from "./layout";
+import { BUILDING, BUSHES, CHANNELS, G, LAMPS, OUTLET, PLINTH, RIVER, TANK_R, TANKS, type Channel, type Tank } from "./layout";
 
 /**
  * Цэвэрлэх байгууламжийн procedural geometry. Материал бүрт нэг merged geometry (draw call цөөн):
  * body (бетон, металл, байр, бут — гүүр нь vertex shader-т эргэнэ), emissive (цонх, гэрэл, LED),
- * water (хоёр сав, суваг, гол, гаргалгааны урсгал), glow. Бүгд index-гүй, атрибут нь ижил.
+ * water (гурван сав, хоёр суваг, гол, гаргалгааны урсгал), glow. Бүгд index-гүй, атрибут нь ижил.
  */
 type V3 = [number, number, number];
 
@@ -61,7 +48,7 @@ export const MAT = {
   pipe: 10,
 } as const;
 
-/** Эргэх бүлэг (aSpin): 0 — үгүй, 1 — зүүн савны гүүр, 2 — баруун савны гүүр */
+/** Эргэх бүлэг (aSpin): 0 — үгүй, 1..3 — тухайн савны (индекс + 1) гүүр */
 type BodyOpts = { color: string; group: number; base: V3; mat: number; spin?: number };
 
 function body(g: THREE.BufferGeometry, o: BodyOpts, along?: THREE.BufferAttribute) {
@@ -108,7 +95,7 @@ function tankParts(t: Tank, group: number, parts: THREE.BufferGeometry[], ladder
   for (const sx of [-0.028, 0.028]) ladder.push(new THREE.BoxGeometry(0.008, t.top + 0.1, 0.008).translate(sx, (t.top + 0.1) / 2, 0));
   for (let y = 0.03; y < t.top + 0.08; y += 0.04) ladder.push(new THREE.BoxGeometry(0.056, 0.006, 0.006).translate(0, y, 0));
   for (const g of ladder) parts.push(body(onWall(g, t, ladderPhi, rOut + 0.016), o("#9aa6b1", MAT.metal)));
-  // баруун сав: хананы дагуух хальх (overflow weir) — цэвэр ус цуглуулах суваг
+  // тунгаагуур (дунд, баруун сав): хананы дагуух хальх (overflow weir) — цэвэр ус цуглуулах суваг
   if (weir) {
     const wr = t.r - 0.07;
     parts.push(body(new THREE.CylinderGeometry(wr, wr, 0.06, 80, 1, true).translate(t.x, t.level + 0.012, t.z), o("#7b858e", MAT.rim)));
@@ -164,15 +151,15 @@ function armParts(t: Tank, group: number, spin: number, parts: THREE.BufferGeome
   parts.push(body(new THREE.BoxGeometry(0.045, 0.045, 0.06).translate(t.x + t.r - 0.005, y + 0.09, t.z + 0.02), o("#2a6f8f", MAT.darkMetal)));
 }
 
-function channelParts(parts: THREE.BufferGeometry[]) {
-  const { a, b, half, wall, bottom, top } = CHANNEL;
+function channelParts(ch: Channel, group: number, parts: THREE.BufferGeometry[]) {
+  const { a, b, dir, half, wall, bottom, top } = ch;
   const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
-  const theta = Math.atan2(-CH_DIR[1], CH_DIR[0]);
+  const theta = Math.atan2(-dir[1], dir[0]);
   const mx = (a[0] + b[0]) / 2;
   const mz = (a[1] + b[1]) / 2;
   const base: V3 = [mx, 0, mz];
   const place = (g: THREE.BufferGeometry) => g.rotateY(theta).translate(mx, 0, mz);
-  const o = (color: string, mat: number) => ({ color, group: G.channel, base, mat });
+  const o = (color: string, mat: number) => ({ color, group, base, mat });
   const W = 2 * (half + wall);
   parts.push(body(place(new THREE.BoxGeometry(L, 0.02, W).translate(0, bottom - 0.01, 0)), o("#6d7780", MAT.concrete)));
   for (const s of [-1, 1])
@@ -255,15 +242,22 @@ function buildingParts(parts: THREE.BufferGeometry[]) {
   parts.push(body(new THREE.BoxGeometry(0.16, 0.012, 0.08).translate(x + 0.18, 0.006, z + d / 2 + 0.04), o("#6d7780", MAT.concrete)));
 }
 
+/** Савны онцлог: гадна шатны өнцөг, хальх (тунгаагуур), төвийн feed well (биологийн сав) */
+const TANK_EXTRAS = [
+  { ladderPhi: 2.35, weir: false, feedWell: true },
+  { ladderPhi: 1.95, weir: true, feedWell: false },
+  { ladderPhi: 0.95, weir: true, feedWell: false },
+] as const;
+
 export function bodyGeometry() {
   const parts: THREE.BufferGeometry[] = [];
-  tankParts(TANK_L, G.tankL, parts, 2.35, false);
-  tankParts(TANK_R, G.tankR, parts, 0.95, true);
-  pivotParts(TANK_L, G.pivotL, parts, true);
-  pivotParts(TANK_R, G.pivotR, parts, false);
-  armParts(TANK_L, G.armL, 1, parts);
-  armParts(TANK_R, G.armR, 2, parts);
-  channelParts(parts);
+  TANKS.forEach((t, i) => {
+    const x = TANK_EXTRAS[i];
+    tankParts(t, G.tank[i], parts, x.ladderPhi, x.weir);
+    pivotParts(t, G.pivot[i], parts, x.feedWell);
+    armParts(t, G.arm[i], i + 1, parts);
+  });
+  CHANNELS.forEach((ch, i) => channelParts(ch, G.channel[i], parts));
   outletParts(parts);
   buildingParts(parts);
   for (const l of LAMPS) {
@@ -299,9 +293,9 @@ export function emissiveGeometry() {
   add(new THREE.PlaneGeometry(0.03, 0.02).translate(x + 0.18, 0.2, z + d / 2 + 0.004), "#fff0cf", 1, G.building, bb, 1);
   for (const l of LAMPS) add(new THREE.BoxGeometry(0.036, 0.008, 0.036).translate(l.x, 0.457, l.z), "#fff3da", 1, G.lamps, [l.x, 0, l.z], 1);
   // хөтлүүрийн LED: төвийн толгой (статик) ба ирмэгийн тэрэг (эргэнэ)
-  ([TANK_L, TANK_R] as const).forEach((t, i) => {
-    add(new THREE.BoxGeometry(0.02, 0.012, 0.02).translate(t.x, t.top + 0.232, t.z), "#5fe3c8", 2, i === 0 ? G.pivotL : G.pivotR, [t.x, t.floor, t.z], 1);
-    add(new THREE.BoxGeometry(0.014, 0.014, 0.014).translate(t.x + t.r - 0.005, t.top + 0.12, t.z + 0.02), "#5fe3c8", 2, i === 0 ? G.armL : G.armR, [t.x, t.top, t.z], 1, i + 1);
+  TANKS.forEach((t, i) => {
+    add(new THREE.BoxGeometry(0.02, 0.012, 0.02).translate(t.x, t.top + 0.232, t.z), "#5fe3c8", 2, G.pivot[i], [t.x, t.floor, t.z], 1);
+    add(new THREE.BoxGeometry(0.014, 0.014, 0.014).translate(t.x + t.r - 0.005, t.top + 0.12, t.z + 0.02), "#5fe3c8", 2, G.arm[i], [t.x, t.top, t.z], 1, i + 1);
   });
   return mergeGeometries(parts, false)!;
 }
@@ -326,7 +320,7 @@ export function glowGeometry(azimuthDeg: number, elevationDeg: number) {
 }
 
 /** water shader-ийн төрөл */
-export const WATER = { tankL: 0, tankR: 1, channel: 2, river: 3, cascade: 4 } as const;
+export const WATER = { tank: [0, 1, 2], channel: [3, 4], river: 5, cascade: 6 } as const;
 
 function waterPiece(g: THREE.BufferGeometry, kind: number, along?: (x: number, y: number, z: number) => number, across?: (x: number, y: number, z: number) => number) {
   const out = prep(g, ["position"]);
@@ -346,26 +340,24 @@ function waterPiece(g: THREE.BufferGeometry, kind: number, along?: (x: number, y
 export function waterGeometry() {
   const parts: THREE.BufferGeometry[] = [];
   // савны гадаргуу (y-ийг shader түвшнээс тавина)
-  parts.push(waterPiece(new THREE.CircleGeometry(TANK_L.r - 0.002, 96).rotateX(-Math.PI / 2).translate(TANK_L.x, 0, TANK_L.z), WATER.tankL));
-  parts.push(waterPiece(new THREE.CircleGeometry(TANK_R.r - 0.002, 96).rotateX(-Math.PI / 2).translate(TANK_R.x, 0, TANK_R.z), WATER.tankR));
+  TANKS.forEach((t, i) => parts.push(waterPiece(new THREE.CircleGeometry(t.r - 0.002, 96).rotateX(-Math.PI / 2).translate(t.x, 0, t.z), WATER.tank[i])));
 
-  // суваг: a → b (along), хөндлөн (across)
-  {
-    const { a, b, half, level } = CHANNEL;
+  // сувгууд: a → b (along), хөндлөн (across)
+  CHANNELS.forEach(({ a, b, dir, half, level }, i) => {
     const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
-    const theta = Math.atan2(-CH_DIR[1], CH_DIR[0]);
+    const theta = Math.atan2(-dir[1], dir[0]);
     const g = new THREE.PlaneGeometry(L, half * 2, 12, 1).rotateX(-Math.PI / 2).rotateY(theta).translate((a[0] + b[0]) / 2, level, (a[1] + b[1]) / 2);
-    const nx = -CH_DIR[1];
-    const nz = CH_DIR[0];
+    const nx = -dir[1];
+    const nz = dir[0];
     parts.push(
       waterPiece(
         g,
-        WATER.channel,
-        (x, _y, z) => ((x - a[0]) * CH_DIR[0] + (z - a[1]) * CH_DIR[1]) / L,
+        WATER.channel[i],
+        (x, _y, z) => ((x - a[0]) * dir[0] + (z - a[1]) * dir[1]) / L,
         (x, _y, z) => ((x - a[0]) * nx + (z - a[1]) * nz) / (half * 2) + 0.5,
       ),
     );
-  }
+  });
 
   // гол: нуман тууз (талбайн хилээр shader таслана)
   {

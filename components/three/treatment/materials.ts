@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { NOISE } from "../journey/materials/glsl";
-import { BUILDING, CH_DIR, CHANNEL, GROUPS, LAMPS, LITS, OUTLET, PLINTH, RIVER, TANK_L, TANK_R } from "./layout";
+import { BUILDING, GRASS, GROUPS, LAMPS, LITS, OUTLET, PLINTH, RIVER, TANKS } from "./layout";
 
 /**
  * Цэвэрлэх байгууламжийн shader-үүд. Бүгд ShaderMaterial (procedural гэрэл, хээ; текстургүй), tone mapping-гүй.
@@ -13,6 +13,7 @@ const v3 = (hex: string, k = 1) => {
   return `vec3(${f(c.r * k)}, ${f(c.g * k)}, ${f(c.b * k)})`;
 };
 const arr = (xs: readonly number[]) => `float[${xs.length}](${xs.map(f).join(", ")})`;
+const arr2 = (xs: readonly (readonly [number, number])[]) => `vec2[${xs.length}](${xs.map(([x, y]) => `vec2(${f(x)}, ${f(y)})`).join(", ")})`;
 const dirGlsl = (x: number, y: number, z: number) => {
   const v = new THREE.Vector3(x, y, z).normalize();
   return `vec3(${f(v.x)}, ${f(v.y)}, ${f(v.z)})`;
@@ -30,12 +31,12 @@ export function createTreatmentUniforms() {
     uActive: { value: 0 },
     uGrow: { value: new Array<number>(GROUPS).fill(0) },
     uLit: { value: new Array<number>(LITS).fill(0) },
-    uSpin: { value: [0, 0] },
-    uLevel: { value: [TANK_L.floor, TANK_R.floor] },
-    uFill: { value: [0, 0] },
+    uSpin: { value: [0, 0, 0] },
+    uLevel: { value: TANKS.map((t) => t.floor) },
+    uFill: { value: [0, 0, 0] },
     uActiveL: { value: 0 },
-    uClean: { value: 0 },
-    uChannel: { value: 0 },
+    uClean: { value: [0, 0] },
+    uChannel: { value: [0, 0] },
     uOutlet: { value: 0 },
     uCascade: { value: 0 },
   };
@@ -47,27 +48,22 @@ const LAYOUT = /* glsl */ `
   const float Z0 = ${f(PLINTH.z0)};
   const float Z1 = ${f(PLINTH.z1)};
   const float Y0 = ${f(PLINTH.y0)};
-  const vec2 TL = vec2(${f(TANK_L.x)}, ${f(TANK_L.z)});
-  const vec2 TR = vec2(${f(TANK_R.x)}, ${f(TANK_R.z)});
-  const float TL_R = ${f(TANK_L.r)};
-  const float TR_R = ${f(TANK_R.r)};
-  const float TL_RO = ${f(TANK_L.r + TANK_L.wall)};
-  const float TR_RO = ${f(TANK_R.r + TANK_R.wall)};
-  const float TL_FLOOR = ${f(TANK_L.floor)};
-  const float TR_FLOOR = ${f(TANK_R.floor)};
-  const float T_TOP = ${f(TANK_L.top)};
+  const vec2 TC[3] = ${arr2(TANKS.map((t) => [t.x, t.z] as const))};
+  const float T_R[3] = ${arr(TANKS.map((t) => t.r))};
+  const float T_RO[3] = ${arr(TANKS.map((t) => t.r + t.wall))};
+  const float T_FLOOR[3] = ${arr(TANKS.map((t) => t.floor))};
+  const float T_TOP = ${f(TANKS[0].top)};
   const vec2 RC = vec2(${f(RIVER.cx)}, ${f(RIVER.cz)});
   const float RR = ${f(RIVER.R)};
   const float RH = ${f(RIVER.half)};
   const float RY = ${f(RIVER.y)};
   const float RBED = ${f(RIVER.bed)};
-  const vec2 CH_A = vec2(${f(CHANNEL.a[0])}, ${f(CHANNEL.a[1])});
-  const vec2 CH_D = vec2(${f(CH_DIR[0])}, ${f(CH_DIR[1])});
   const vec2 OUTFALL = vec2(${f(OUTLET.xEnd + 0.1)}, ${f(OUTLET.zRun)});
   const vec2 BLD = vec2(${f(BUILDING.x)}, ${f(BUILDING.z)});
   const vec2 BLD_HALF = vec2(${f(BUILDING.w / 2)}, ${f(BUILDING.d / 2)});
-  const float LAMPX[3] = ${arr(LAMPS.map((l) => l.x))};
-  const float LAMPZ[3] = ${arr(LAMPS.map((l) => l.z))};
+  const int LAMP_N = ${LAMPS.length};
+  const float LAMPX[${LAMPS.length}] = ${arr(LAMPS.map((l) => l.x))};
+  const float LAMPZ[${LAMPS.length}] = ${arr(LAMPS.map((l) => l.z))};
   float riverD(vec2 q) { return abs(length(q - RC) - RR) - RH; }
   float segD(vec2 p, vec2 a, vec2 b) {
     vec2 pa = p - a;
@@ -123,6 +119,18 @@ const WATER_COLORS = /* glsl */ `
   const vec3 FOAM = ${v3("#d6f1ea")};
 `;
 
+/**
+ * Савны цэвэршилт (0 — бохир ногоон, 1 — цэвэр цэнхэр): зүүн сав 0, дунд сав 0 → MID, баруун сав MID → 1.
+ * uClean[0] — дунд сав, uClean[1] — баруун сав.
+ */
+const TANK_CLEAN = /* glsl */ `
+  uniform float uClean[2];
+  const float MID_CLEAN = 0.5;
+  float tankClean(int k) {
+    return k == 0 ? 0.0 : k == 1 ? MID_CLEAN * uClean[0] : MID_CLEAN + (1.0 - MID_CLEAN) * uClean[1];
+  }
+`;
+
 // ---------------------------------------------------------------------------------------------
 
 /**
@@ -170,25 +178,23 @@ export function groundMaterial(U: TreatmentUniforms) {
           col = mix(col, C_MARK * 0.8, dash);
         }
         // савны эргэн тойрны явган зам + хананы ёроолын сүүдэр
-        float dl = length(q - TL) - TL_RO;
-        float dr = length(q - TR) - TR_RO;
-        float da = min(dl, dr);
+        float da = 1e3;
+        for (int k = 0; k < 3; k++) da = min(da, length(q - TC[k]) - T_RO[k]);
         if (da < 0.17) col = C_APRON * (0.88 + 0.1 * vnoise(q * 22.0)) * mix(0.8, 1.0, smoothstep(0.004, 0.012, abs(da - 0.165)));
-        // явган замууд: байр → зүүн сав, байр → зам, гаргалгааны худаг
-        float pd = min(segD(q, BLD + vec2(0.18, BLD_HALF.y), vec2(-1.62, -0.68)), segD(q, BLD + vec2(0.18, BLD_HALF.y), vec2(-1.3, -1.4)));
-        pd = min(pd, segD(q, vec2(0.25, -0.62), vec2(0.25, -1.4)));
+        // явган замууд: байр → зүүн сав, байр → зам, дунд сав → зам
+        vec2 door = BLD + vec2(0.18, BLD_HALF.y);
+        float pd = min(segD(q, door, TC[0] - vec2(0.0, T_R[0] - 0.08)), segD(q, door, vec2(BLD.x + 0.7, Z0 + 0.24)));
+        pd = min(pd, segD(q, vec2(TC[1].x + 0.1, TC[1].y - 0.4), vec2(TC[1].x + 0.1, Z0 + 0.24)));
         if (pd < 0.045) col = C_APRON * (0.9 + 0.1 * vnoise(q * 30.0));
         // зүлэг (ирмэг нь noise) + голын эргийн ургамал
-        float gr = min(length(q - vec2(-2.25, 1.32)) - 0.5, length(q - vec2(-0.05, 1.4)) - 0.3);
-        gr = min(gr, min(length(q - vec2(2.2, -1.2)) - 0.4, length(q - vec2(2.32, 0.28)) - 0.28));
-        gr = min(gr, length(q - vec2(0.12, -1.18)) - 0.22);
-        gr = min(gr, rd - 0.1);
+        float gr = rd - 0.1;
+        ${GRASS.map((g) => `gr = min(gr, length(q - vec2(${f(g.x)}, ${f(g.z)})) - ${f(g.r)});`).join("\n        ")}
         gr += (vnoise(q * 7.0) - 0.5) * 0.12;
         if (gr < 0.0 || length(q - RC) < RR) col = C_GRASS * (0.7 + 0.45 * vnoise(q * 18.0) + 0.12 * vnoise(q * 60.0));
         col = mix(col, C_EARTH, 1.0 - smoothstep(0.0, 0.035, rd));
         col *= mix(0.55, 1.0, smoothstep(0.0, 0.06, da));
         // гэрэлтүүлгийн толбо, байрны цонхны тусгал
-        for (int k = 0; k < 3; k++) {
+        for (int k = 0; k < LAMP_N; k++) {
           float pool = pow(max(1.0 - length(q - vec2(LAMPX[k], LAMPZ[k])) / 0.5, 0.0), 2.0);
           col += C_WARM * pool * 0.2 * uLit[1];
         }
@@ -270,7 +276,7 @@ export function bodyMaterial(U: TreatmentUniforms) {
       attribute float aSpin;
       attribute float aAlong;
       uniform float uGrow[${GROUPS}];
-      uniform float uSpin[2];
+      uniform float uSpin[3];
       varying vec3 vW;
       varying vec3 vN;
       varying vec3 vCol;
@@ -286,7 +292,7 @@ export function bodyMaterial(U: TreatmentUniforms) {
         int sp = int(aSpin + 0.5);
         if (sp > 0) {
           float a = uSpin[sp - 1];
-          vec2 c = sp == 1 ? TL : TR;
+          vec2 c = TC[sp - 1];
           float cs = cos(a);
           float sn = sin(a);
           vec2 d = p.xz - c;
@@ -304,10 +310,9 @@ export function bodyMaterial(U: TreatmentUniforms) {
     `,
     fragmentShader: /* glsl */ `
       uniform float uDim;
-      uniform float uLevel[2];
-      uniform float uFill[2];
+      uniform float uLevel[3];
+      uniform float uFill[3];
       uniform float uActiveL;
-      uniform float uClean;
       uniform float uOutlet;
       uniform float uPhase;
       uniform float uActive;
@@ -320,6 +325,7 @@ export function bodyMaterial(U: TreatmentUniforms) {
       ${NOISE}
       ${LAYOUT}
       ${LIGHT}
+      ${TANK_CLEAN}
       const vec3 C_CYAN = ${v3("#6fd8ff")};
       void main() {
         vec3 n = normalize(vN);
@@ -337,11 +343,10 @@ export function bodyMaterial(U: TreatmentUniforms) {
         } else if (m == 2) {
           // савны дотор хана: гүн рүү бараан, усны шугамын дээр бараан ногоон/цэнхэр зурвас
           int t = int(vGroup + 0.5);
-          float fl = t == 0 ? TL_FLOOR : TR_FLOOR;
-          alb *= mix(0.4, 1.0, smoothstep(fl, T_TOP, vW.y));
+          alb *= mix(0.4, 1.0, smoothstep(T_FLOOR[t], T_TOP, vW.y));
           float lv = uLevel[t];
           float band = smoothstep(lv + 0.035, lv, vW.y) * step(0.002, uFill[t]);
-          vec3 grime = t == 0 ? ${v3("#2c4034")} : mix(${v3("#2c4034")}, ${v3("#2b4556")}, uClean);
+          vec3 grime = mix(${v3("#2c4034")}, ${v3("#2b4556")}, tankClean(t));
           alb = mix(alb, grime, band * 0.8);
         } else if (m == 4) {
           sk = 0.45;
@@ -389,7 +394,7 @@ export function emissiveMaterial(U: TreatmentUniforms) {
       attribute float aSpin;
       uniform float uGrow[${GROUPS}];
       uniform float uLit[${LITS}];
-      uniform float uSpin[2];
+      uniform float uSpin[3];
       varying vec2 vUv;
       varying vec3 vCol;
       varying float vLit;
@@ -402,7 +407,7 @@ export function emissiveMaterial(U: TreatmentUniforms) {
         int sp = int(aSpin + 0.5);
         if (sp > 0) {
           float a = uSpin[sp - 1];
-          vec2 c = sp == 1 ? TL : TR;
+          vec2 c = TC[sp - 1];
           vec2 d = p.xz - c;
           p.xz = c + vec2(d.x * cos(a) - d.y * sin(a), d.x * sin(a) + d.y * cos(a));
         }
@@ -475,8 +480,8 @@ export function glowMaterial(U: TreatmentUniforms) {
 
 /**
  * Ус. Зүүн сав — бохир ус: дүүрэх үед бараан (түүхий), идэвхжихэд ногоон-teal, эргэлдэх урсгал, гүүрний араас
- * хөөс. Баруун сав — ногоон-teal-аас цэвэр цэнхэр рүү (uClean), төвөөс цагираг долгио, хальхын cyan тодотгол.
- * Суваг — фронттой урсгал. Гол — нуман урсгал, гаргалгааны доорх цагираг. Гаргалгааны унах урсгал.
+ * хөөс. Дунд сав — ногоон-teal-аас хагас цэвэршинэ, баруун сав — цэвэр цэнхэр рүү (tankClean), төвөөс цагираг
+ * долгио, хальхын cyan тодотгол. Сувгууд — фронттой урсгал (дараагийн сав руу цэнхэршинэ). Гол — нуман урсгал, гаргалгааны доорх цагираг. Гаргалгааны унах урсгал.
  */
 export function waterMaterial(U: TreatmentUniforms) {
   return new THREE.ShaderMaterial({
@@ -499,14 +504,14 @@ export function waterMaterial(U: TreatmentUniforms) {
       attribute float aKind;
       attribute float aAlong;
       attribute float aAcross;
-      uniform float uLevel[2];
+      uniform float uLevel[3];
       varying vec3 vW;
       varying float vKind;
       varying float vA;
       varying float vC;
       void main() {
         vec3 p = position;
-        if (aKind < 1.5) p.y = uLevel[int(aKind + 0.5)];
+        if (aKind < 2.5) p.y = uLevel[int(aKind + 0.5)];
         vW = p;
         vKind = aKind;
         vA = aAlong;
@@ -520,11 +525,10 @@ export function waterMaterial(U: TreatmentUniforms) {
       uniform float uShimmer;
       uniform float uDetail;
       uniform float uActive;
-      uniform float uSpin[2];
-      uniform float uFill[2];
+      uniform float uSpin[3];
+      uniform float uFill[3];
       uniform float uActiveL;
-      uniform float uClean;
-      uniform float uChannel;
+      uniform float uChannel[2];
       uniform float uCascade;
       varying vec3 vW;
       varying float vKind;
@@ -533,6 +537,7 @@ export function waterMaterial(U: TreatmentUniforms) {
       ${NOISE}
       ${LAYOUT}
       ${WATER_COLORS}
+      ${TANK_CLEAN}
       const float TAU = 6.2831853;
 
       /** Гадаргуугийн гялбаа, тэнгэрийн тусгал (ар тал руу), key гэрлийн цэгэн тусгал */
@@ -543,8 +548,9 @@ export function waterMaterial(U: TreatmentUniforms) {
       }
 
       vec3 tank(int k) {
-        vec2 c = k == 0 ? TL : TR;
-        float R = k == 0 ? TL_R : TR_R;
+        vec2 c = TC[k];
+        float R = T_R[k];
+        float cl = tankClean(k);
         vec2 d = vW.xz - c;
         float r = length(d) / R;
         float th = atan(d.y, d.x);
@@ -563,14 +569,14 @@ export function waterMaterial(U: TreatmentUniforms) {
         vec3 waste = mix(raw, act, k == 0 ? uActiveL : 1.0);
         float wake = exp(-behind * 2.2) * smoothstep(0.08, 0.2, r) * (1.0 - smoothstep(0.92, 1.0, r));
         float foamEdge = smoothstep(0.86, 1.0, r) * (0.4 + 0.6 * n2);
-        float foam = (wake * (0.45 + 0.55 * n2) * 0.45 + foamEdge * 0.12) * (k == 0 ? uActiveL : 1.0 - uClean);
+        float foam = (wake * (0.45 + 0.55 * n2) * 0.45 + foamEdge * 0.12) * (k == 0 ? uActiveL : 1.0 - cl);
         waste = mix(waste, FOAM * 0.7, clamp(foam, 0.0, 1.0) * 0.45);
         if (k == 0) {
           // feed well-ийн доторх үймээн
           waste = mix(waste, FOAM * 0.7, (1.0 - smoothstep(0.26, 0.3, r)) * 0.18 * (0.5 + 0.5 * n2) * uActiveL);
         }
         vec3 col = waste;
-        if (k == 1) {
+        if (k > 0) {
           // цэвэр ус: төвөөс гадагш цагираг долгио, хальхын (weir) тод цагираг
           float rr = r * R;
           float rings = (0.5 + 0.5 * sin(rr * 44.0 - uPhase * 3.0 - uShimmer * 1.4)) * exp(-rr * 2.2) * smoothstep(0.08, 0.16, r);
@@ -578,7 +584,7 @@ export function waterMaterial(U: TreatmentUniforms) {
           float weir = 1.0 - smoothstep(0.004, 0.012, abs(rr - (R - 0.07)));
           clean += C_HI * weir * 0.25;
           clean = mix(clean, FOAM, wake * 0.12 * (0.4 + 0.6 * n2));
-          col = mix(waste, clean, uClean);
+          col = mix(waste, clean, cl);
         }
         // төв гүн (налуу ёроол) бараан, хана руу цайвар; тэнгэрийн тусгал ар тал руу
         col *= mix(0.72, 1.0, smoothstep(0.0, 0.8, r));
@@ -590,21 +596,26 @@ export function waterMaterial(U: TreatmentUniforms) {
       void main() {
         int k = int(vKind + 0.5);
         vec3 col;
-        if (k <= 1) {
+        if (k <= 2) {
           if (uFill[k] < 0.002) discard;
           col = tank(k);
-        } else if (k == 2) {
-          if (uChannel < 0.001 || vA > uChannel) discard;
+        } else if (k <= 4) {
+          // суваг: эх савны өнгөнөөс дараагийн сав руу бага зэрэг цэнхэршинэ
+          int ci = k - 3;
+          float front = uChannel[ci];
+          if (front < 0.001 || vA > front) discard;
+          float cl = tankClean(ci) + vA * 0.25;
+          vec3 hi = mix(W_HI, C_HI, cl);
           float s = vA * 0.36;
           float n1 = vnoise(vec2(s * 22.0 - uPhase * 3.0, vC * 5.0));
           float n2 = vnoise(vec2(s * 55.0 - uPhase * 4.4 + uShimmer * 0.5, vC * 11.0 + 4.0));
           col = mix(W_DEEP, W_MID, 0.45 + 0.4 * n1) + W_HI * smoothstep(0.6, 0.95, n1 * 0.55 + n2 * 0.45) * 0.3;
-          col = mix(col, mix(C_DEEP, C_MID, 0.5 + 0.4 * n1), vA * 0.25);
+          col = mix(col, mix(C_DEEP, C_MID, 0.5 + 0.4 * n1), cl);
           float ch = fract((vA * 0.36 - abs(vC - 0.5) * 0.05) * 18.0 - uPhase * 1.4);
-          col += W_HI * smoothstep(0.0, 0.06, ch) * (1.0 - smoothstep(0.1, 0.24, ch)) * 0.14;
-          col += W_HI * (1.0 - smoothstep(0.0, 0.08, uChannel - vA)) * 0.4 * step(uChannel, 0.999);
+          col += hi * smoothstep(0.0, 0.06, ch) * (1.0 - smoothstep(0.1, 0.24, ch)) * 0.14;
+          col += hi * (1.0 - smoothstep(0.0, 0.08, front - vA)) * 0.4 * step(front, 0.999);
           col += surfaceLight(vW.xz, 0.8);
-        } else if (k == 3) {
+        } else if (k == 5) {
           if (vW.x > X1 || vW.z > Z1) discard;
           vec2 d = vW.xz - RC;
           float th = atan(d.y, d.x);

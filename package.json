@@ -2,7 +2,7 @@
   "name": "darkhan-us-suvag",
   "version": "0.1.0",
   "private": true,
-  "description": "Дархан Ус Суваг ОНӨААТҮГ — усны замналын storytelling вэб сайт",
+  "description": "“Дархан Ус Суваг” ХК — усны замналын storytelling вэб сайт",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

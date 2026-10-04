@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { NOISE } from "../journey/materials/glsl";
-import { DISTRICTS, PLANT, PUMPS, RESERVOIR, SOURCE_ZONE } from "./layout";
+import { DISTRICTS, GER_AREAS, HIGHWAY, PARK, PLANT, PUMPS, RESERVOIR_H, RESERVOIRS, SOURCE_ZONE } from "./layout";
 import { KEYS } from "./facilities";
 import { ZONES } from "./state";
 import { FLOOR_H } from "./city";
@@ -131,7 +131,11 @@ export function terrainMaterial(U: CityUniforms) {
       const vec4 R_PLANT = ${v4rect(PLANT.pad)};
       const vec2 P1 = vec2(${f(PUMPS[0][0])}, ${f(PUMPS[0][1])});
       const vec2 P2 = vec2(${f(PUMPS[1][0])}, ${f(PUMPS[1][1])});
-      const vec2 RES = vec2(${f(RESERVOIR.c[0])}, ${f(RESERVOIR.c[1])});
+      const vec2 RES = vec2(${f((RESERVOIRS[0].c[0] + RESERVOIRS[3].c[0]) / 2)}, ${f((RESERVOIRS[0].c[1] + RESERVOIRS[3].c[1]) / 2)});
+      const vec4 R_PARK = ${v4rect(PARK)};
+      const vec4 R_GER[${GER_AREAS.length}] = vec4[${GER_AREAS.length}](${GER_AREAS.map(v4rect).join(", ")});
+      const vec3 C_DIRT = ${v3("#4b4537")};
+      const vec3 C_LANE = ${v3("#5c5647")};
       const vec3 C_GRASS = ${v3("#34483a")};
       const vec3 C_DRY = ${v3("#4a503d")};
       const vec3 C_FIELD_A = ${v3("#4a4c39")};
@@ -154,7 +158,7 @@ export function terrainMaterial(U: CityUniforms) {
         vec3 col = mix(C_GRASS, C_DRY, smoothstep(0.35, 0.8, n1) * 0.85);
         col *= 0.86 + 0.18 * n2 + 0.08 * n3;
         // хотоос гадуурх тариалангийн талбай (өмнөд, зүүн, баруун)
-        float farm = max(smoothstep(4.9, 5.4, q.y), max(smoothstep(9.0, 9.6, q.x), smoothstep(-8.6, -9.2, q.x))) * step(-2.0, q.y);
+        float farm = max(smoothstep(4.9, 5.4, q.y), max(smoothstep(9.3, 9.9, q.x), smoothstep(-9.3, -9.9, q.x))) * step(-2.0, q.y);
         if (farm > 0.0) {
           vec2 fq = mat2(0.96, 0.28, -0.28, 0.96) * q;
           vec2 cell = fq * vec2(0.85, 2.1);
@@ -183,9 +187,15 @@ export function terrainMaterial(U: CityUniforms) {
         // байгууламжийн талбай
         float dSrc = rectD(q, R_SRC);
         col = mix(col, C_LAWN * (0.9 + 0.12 * n2), (1.0 - smoothstep(0.0, 0.04, dSrc)) * 0.85);
-        float pads = min(min(length(q - P1) - 0.3, length(q - P2) - 0.3), length(q - RES) - ${f(RESERVOIR.r + 0.2)});
+        float pads = min(min(length(q - P1) - 0.3, length(q - P2) - 0.3), rectD(q, vec4(RES - vec2(0.42, 0.42), RES + vec2(0.42, 0.42))));
         col = mix(col, C_GRAVEL * (0.9 + 0.12 * n3), 1.0 - smoothstep(0.0, 0.05, pads));
         col = mix(col, C_CONC * (0.9 + 0.1 * n3), 1.0 - smoothstep(0.0, 0.03, rectD(q, R_PLANT)));
+        // "Миний Монгол" цэцэрлэгт хүрээлэн: арчилгаатай зүлэг
+        col = mix(col, C_LAWN * (0.88 + 0.16 * n2), (1.0 - smoothstep(0.0, 0.05, rectD(q, R_PARK))) * 0.9);
+        // гэр хороолол: хуурай шороо (хашааны мөр нь instanced хайсаар)
+        float dGer = 1e3;
+        for (int k = 0; k < ${GER_AREAS.length}; k++) dGer = min(dGer, rectD(q, R_GER[k]));
+        if (dGer < 0.06) col = mix(col, mix(C_DIRT, C_LANE, n2) * (0.85 + 0.25 * n3), (1.0 - smoothstep(0.0, 0.06, dGer)) * 0.85);
         // өвс, хөрсний нарийн бүтэц (ойроос харахад тэгш биш)
         if (uDetail > 0.5) col *= 0.9 + 0.2 * vnoise(q * 64.0 + 1.3) * vnoise(q * 17.0 + 4.1);
         vec3 lit = shade(col, n) * 0.82;
@@ -304,9 +314,19 @@ export function roadMaterial(U: CityUniforms) {
       ${COMMON}
       const vec3 C_ASPH = ${v3("#283038")};
       const vec3 C_MARK = ${v3("#e2e8ec")};
+      const vec3 C_VERGE = ${v3("#30483a")};
+      const vec3 C_BIKE = ${v3("#1f9a5e")};
+      const vec3 C_CURB = ${v3("#8a939b")};
+      // хоёр урсгалтай зам: тусгаарлагч | зорчих хэсэг | модтой зурвас | дугуйн зам (төвөөс)
+      const float HW_MED = ${f(HIGHWAY.median)};
+      const float HW_CAR = ${f(HIGHWAY.carriage)};
+      const float HW_STRIP = ${f(HIGHWAY.strip)};
+      // шугамын пикселийн хамрах хувь (box filter): алсад пикселээс нарийн шугам бүдгэрнэ (тод зураас болж томрохгүй)
       float line(float x, float c, float w) {
-        float d = abs(x - c);
-        return 1.0 - smoothstep(w * 0.5, w * 0.5 + fwidth(x) * 1.2, d);
+        float fw = max(fwidth(x), 1e-6);
+        float lo = max(x - fw * 0.5, c - w * 0.5);
+        float hi = min(x + fw * 0.5, c + w * 0.5);
+        return clamp((hi - lo) / fw, 0.0, 1.0);
       }
       void main() {
         vec3 col = C_ASPH * (0.86 + 0.12 * vnoise(vW.xz * 36.0) + 0.06 * (hash21(floor(vW.xz * 420.0)) - 0.5));
@@ -314,21 +334,50 @@ export function roadMaterial(U: CityUniforms) {
           float along = vRoad.x;
           float hw = vRoad.z * 0.5;
           float x = vRoad.y * hw;
-          float major = vRoad.w;
-          // дугуйн мөр (бага зэрэг бараан зурвас)
-          col *= 1.0 - 0.06 * (line(abs(x), hw * 0.5, hw * 0.35));
-          float m = line(abs(x), hw - 0.009, 0.003);
-          if (major > 0.5) {
-            m = max(m, line(abs(x), 0.004, 0.0022));
-            m = max(m, line(abs(x), hw * 0.5, 0.002) * step(fract(along * 9.0), 0.55));
-          } else {
-            m = max(m, line(x, 0.0, 0.0022) * step(fract(along * 9.0), 0.5));
-          }
-          // уулзварын өмнөх явган хүний гарц
+          float type = vRoad.w;
+          vec3 mark = C_MARK * (0.68 + 0.12 * vnoise(vW.xz * 90.0));
           float zebra = (1.0 - step(0.045, min(vEnds.x, vEnds.y))) * step(abs(x), hw - 0.014);
           zebra *= step(0.5, fract(x * 46.0)) * step(0.008, min(vEnds.x, vEnds.y));
-          m = max(m, zebra);
-          col = mix(col, C_MARK * (0.68 + 0.12 * vnoise(vW.xz * 90.0)), m * 0.85);
+          if (type > 2.5) {
+            // тойрог: ирмэгийн шугам, эгнээ хуваах тасархай
+            col *= 1.0 - 0.06 * line(abs(x), hw * 0.5, hw * 0.35);
+            float m = line(abs(x), hw - 0.008, 0.003);
+            m = max(m, line(x, 0.0, 0.0022) * step(fract(along * 9.0), 0.5));
+            col = mix(col, mark, m * 0.85);
+          } else if (type > 1.5) {
+            float ax = abs(x);
+            float grass = 0.82 + 0.3 * vnoise(vW.xz * 48.0) * vnoise(vW.xz * 13.0 + 2.0);
+            if (ax < HW_MED || (ax > HW_CAR && ax < HW_STRIP)) {
+              // модтой тусгаарлагч, зурвас — зүлэг, хашлагын цайвар ирмэг
+              col = C_VERGE * grass;
+              col = mix(col, C_CURB, max(line(ax, HW_MED - 0.002, 0.003), max(line(ax, HW_CAR + 0.002, 0.003), line(ax, HW_STRIP - 0.002, 0.003))));
+            } else if (ax >= HW_STRIP) {
+              // дугуйн зам: ногоон хучилт, цагаан ирмэг
+              col = C_BIKE * (0.85 + 0.15 * vnoise(vW.xz * 60.0));
+              col = mix(col, mark, max(line(ax, HW_STRIP + 0.003, 0.0018), line(ax, hw - 0.003, 0.0018)) * 0.8);
+            } else {
+              // зорчих хэсэг: 2 эгнээ (тасархай), ирмэгийн тасралтгүй шугам, дугуйн мөр
+              float lane = (HW_MED + HW_CAR) * 0.5;
+              col *= 1.0 - 0.06 * line(abs(ax - lane), (HW_CAR - HW_MED) * 0.25, (HW_CAR - HW_MED) * 0.18);
+              float m = max(line(ax, HW_MED + 0.005, 0.0025), line(ax, HW_CAR - 0.005, 0.0025));
+              m = max(m, line(ax, lane, 0.002) * step(fract(along * 9.0), 0.55));
+              m = max(m, zebra);
+              col = mix(col, mark, m * 0.85);
+            }
+          } else {
+            // дугуйн мөр (бага зэрэг бараан зурвас)
+            col *= 1.0 - 0.06 * (line(abs(x), hw * 0.5, hw * 0.35));
+            float m = line(abs(x), hw - 0.009, 0.003);
+            if (type > 0.5) {
+              m = max(m, line(abs(x), 0.004, 0.0022));
+              m = max(m, line(abs(x), hw * 0.5, 0.002) * step(fract(along * 9.0), 0.55));
+            } else {
+              m = max(m, line(x, 0.0, 0.0022) * step(fract(along * 9.0), 0.5));
+            }
+            // уулзварын өмнөх явган хүний гарц
+            m = max(m, zebra);
+            col = mix(col, mark, m * 0.85);
+          }
         } else {
           col *= 0.96;
         }
@@ -843,8 +892,17 @@ export function facilityMaterial(U: CityUniforms) {
         else if (m == 5) alb *= 0.75 + 0.3 * step(0.4, fract(vW.x * 120.0));
         else if (m == 6) alb *= mix(0.45, 1.0, smoothstep(0.0, 0.14, vW.y));
         else if (m == 7) alb = mix(${v3("#e8eef2")}, ${v3("#d94a5c")}, step(0.5, fract((vW.x + vW.z) * 40.0)));
+        else if (m == 9) alb *= 0.78 + 0.34 * vnoise(vW.xz * 40.0) * vnoise(vW.xz * 11.0 + 3.0);
+        else if (m == 10) sp = 0.5;
         vec3 col = shade(alb, n);
         col += ${v3("#dce8f2")} * sp * pow(max(dot(n, normalize(KEY_DIR + v)), 0.0), 30.0);
+        // хөшөө: доороос гэрэлтүүлсэн (шөнө) — алт гялалзана, цагаан/цөцгий чулуу дулаан туяатай
+        if (m == 8) {
+          float h = pow(max(dot(n, normalize(${dirGlsl(0.2, 0.9, 0.6)} + v)), 0.0), 18.0);
+          col = shade(alb, n) * 0.75 + ${v3("#ffe7a8")} * h * 0.45 + alb * 0.1;
+        } else if (m == 11) {
+          col += alb * ${v3("#ffe2b8")} * 0.1 * (1.0 - smoothstep(0.0, 0.45, vW.y));
+        }
         int z = int(vZone + 0.5);
         float e = z >= 5 ? 1.0 : uEmph[z];
         col *= mix(0.5, 1.0, e);
@@ -902,16 +960,19 @@ export function facilityWaterMaterial(U: CityUniforms) {
     },
     vertexShader: /* glsl */ `
       attribute float aKind;
+      attribute vec3 aRef;
       uniform float uReservoir;
       varying vec3 vW;
       varying float vKind;
+      varying vec3 vRef;
       void main() {
         vec3 p = position;
         // усан сан: бага түвшнээс (нөөц) 3-р алхамд дүүрнэ
-        if (aKind < 0.5) p.y = 0.018 + (0.25 + 0.75 * uReservoir) * ${f(RESERVOIR.h - 0.045)};
+        if (aKind < 0.5) p.y = 0.018 + (0.25 + 0.75 * uReservoir) * ${f(RESERVOIR_H - 0.045)};
         vec4 w = modelMatrix * vec4(p, 1.0);
         vW = w.xyz;
         vKind = aKind;
+        vRef = aRef;
         gl_Position = projectionMatrix * viewMatrix * w;
       }
     `,
@@ -922,17 +983,23 @@ export function facilityWaterMaterial(U: CityUniforms) {
       uniform float uPhase;
       varying vec3 vW;
       varying float vKind;
+      varying vec3 vRef;
       ${NOISE}
       ${COMMON}
       void main() {
         float t = uPhase * 0.4 + uTime * 0.12;
         vec3 col;
         if (vKind < 0.5) {
-          vec2 d = vW.xz - vec2(${f(RESERVOIR.c[0])}, ${f(RESERVOIR.c[1])});
-          float r = length(d) / ${f(RESERVOIR.r)};
+          // сан бүрийн төвөөс цагираг долгио (aRef: төв x, z, радиус)
+          vec2 d = vW.xz - vRef.xy;
+          float r = min(length(d) / vRef.z, 1.0);
           float rings = 0.5 + 0.5 * sin(r * 22.0 - t * 6.0);
           col = mix(${v3("#0c3a63")}, ${v3("#1b77b3")}, 0.35 + 0.35 * vnoise(vW.xz * 14.0 + t));
           col += ${v3("#8fe0ff")} * rings * 0.12 * (1.0 - r) + ${v3("#38b6f0")} * 0.18 * uReservoir;
+        } else if (vKind > 2.5) {
+          // усан толь (Морин хуур цогцолбор): тэнгэр, гэрлийн тусгалтай нам гүм ус
+          float n = vnoise(vW.xz * 30.0 + vec2(t * 0.3, 0.0));
+          col = mix(${v3("#0a2236")}, ${v3("#24527a")}, 0.35 + 0.35 * n) + ${v3("#ffe2b8")} * smoothstep(0.75, 0.95, vnoise(vW.xz * 90.0 - t)) * 0.18;
         } else {
           float n = vnoise(vW.xz * 24.0 + vec2(t, -t * 0.7));
           vec3 idle = ${v3("#1b2a25")};
@@ -1253,5 +1320,63 @@ export function propMaterial(U: CityUniforms) {
         ${COLORSPACE}
       }
     `,
+  });
+}
+
+/**
+ * Гэр хороолол (instanced): гэр, байшин, хашаа. aPart — 0 хана (aWall), 1 дээвэр (aRoof), 2 тооно, 3 хаалга/цонх
+ * (шөнө дулаан гэрэлтэнэ — aLitW). Хотын онцлох бүсээр (uEmph[3]) бүдгэрнэ.
+ */
+export function gerMaterial(U: CityUniforms) {
+  return new THREE.ShaderMaterial({
+    uniforms: { uFogColor: U.uFogColor, uFogStart: U.uFogStart, uFogDensity: U.uFogDensity, uEmph: U.uEmph },
+    vertexShader: /* glsl */ `
+      attribute float aPart;
+      attribute vec3 aWall;
+      attribute vec3 aRoof;
+      attribute float aLitW;
+      varying vec3 vW;
+      varying vec3 vN;
+      varying vec3 vWall;
+      varying vec3 vRoof;
+      varying float vPart;
+      varying float vLit;
+      void main() {
+        vec4 w = modelMatrix * instanceMatrix * vec4(position, 1.0);
+        vW = w.xyz;
+        vN = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * normal);
+        vWall = aWall;
+        vRoof = aRoof;
+        vPart = aPart;
+        vLit = aLitW;
+        gl_Position = projectionMatrix * viewMatrix * w;
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform float uEmph[${ZONES}];
+      varying vec3 vW;
+      varying vec3 vN;
+      varying vec3 vWall;
+      varying vec3 vRoof;
+      varying float vPart;
+      varying float vLit;
+      ${COMMON}
+      void main() {
+        vec3 n = normalize(vN);
+        if (!gl_FrontFacing) n = -n;
+        int p = int(vPart + 0.5);
+        vec3 col;
+        if (p == 3) {
+          col = mix(${v3("#1a222b")}, ${v3("#ffc87a")} * 1.1, vLit);
+        } else {
+          vec3 alb = p == 0 ? vWall : p == 1 ? vRoof : ${v3("#3a3530")};
+          col = shade(alb, n);
+        }
+        col *= mix(0.6, 1.0, uEmph[3]);
+        gl_FragColor = vec4(applyFog(col, vW), 1.0);
+        ${COLORSPACE}
+      }
+    `,
+    side: THREE.DoubleSide,
   });
 }

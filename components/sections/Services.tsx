@@ -233,7 +233,7 @@ export default function Services() {
                       ))}
                     </dl>
                     <a
-                      href="#customer"
+                      href="#contact"
                       className="svc-reveal mt-8 inline-flex items-center gap-2 text-sm font-semibold text-water transition-[gap] hover:gap-3"
                     >
                       Дэлгэрэнгүй <span aria-hidden>→</span>

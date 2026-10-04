@@ -5,7 +5,7 @@ export function LogoMark({ size, preload = false, className }: { size: number; p
   return (
     <Image
       src="/logo.png"
-      alt="Дархан Ус Суваг ОНӨААТҮГ-ын лого"
+      alt="“Дархан Ус Суваг” ХК-ийн лого"
       width={size}
       height={size}
       preload={preload}

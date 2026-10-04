@@ -8,7 +8,7 @@ import About from "@/components/sections/About";
 import Services from "@/components/sections/Services";
 import WaterQuality from "@/components/sections/WaterQuality";
 import CityMap from "@/components/sections/CityMap";
-import CustomerServices from "@/components/sections/CustomerServices";
+import Values from "@/components/sections/Values";
 import Contact from "@/components/sections/Contact";
 
 export default function Home() {
@@ -25,7 +25,7 @@ export default function Home() {
           <Services />
           <WaterQuality />
           <CityMap />
-          <CustomerServices />
+          <Values />
         </DropReveal>
       </main>
       <div className="theme-light bg-foam text-abyss">

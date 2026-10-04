@@ -78,7 +78,7 @@ function StepCard({ s, i, compact = false }: { s: CityStep; i: number; compact?:
  * Pin хийгдсэн scene: scroll хийхэд гинжний шугамаар ус урсаж алхам бүрийг гэрэлтүүлнэ,
  * газрын зураг дээр камер тухайн объект руу ойртож, тэр давхарга нь сэргэнэ.
  * Desktop: алхмууд ба мэдээлэл зүүн талын нэг самбарт (мап баруун талд чөлөөтэй); mobile: гинж зүүн, карт доор.
- * Dark (.theme-dark): Усны чанараас шилжилтгүй үргэлжилнэ; доор нь Хэрэглэгчийн үйлчилгээ усны долгиотой ирмэгтэйгээ мапын дээгүүр бүрхэж гарна (map-inner parallax).
+ * Dark (.theme-dark): Усны чанараас шилжилтгүй үргэлжилнэ; доор нь Алсын хараа, эрхэм зорилго, үнэт зүйлсийн хэсэг усны долгиотой ирмэгтэйгээ мапын дээгүүр бүрхэж гарна (map-inner parallax).
  * Navbar: хэсэг дор нь байхад бараан (data-nav-dark).
  */
 export default function CityMap() {
@@ -165,7 +165,7 @@ export default function CityMap() {
       ))}
 
       <div className="map-stage relative h-[100svh] min-h-[600px] overflow-hidden">
-        {/* .map-inner: pin дууссаны дараа Хэрэглэгчийн үйлчилгээ усны долгиотойгоо дээгүүр нь бүрхэж гарахад мап удаан гүйнэ (parallax) */}
+        {/* .map-inner: pin дууссаны дараа Алсын хараа, эрхэм зорилгын хэсэг усны долгиотойгоо дээгүүр нь бүрхэж гарахад мап удаан гүйнэ (parallax) */}
         <div className="map-inner absolute inset-0">
           {/* газрын зураг: cover + камер (SVG — 3D бэлэн болох хүртэл ба fallback) */}
           <div
@@ -340,7 +340,7 @@ export default function CityMap() {
                 <span className="h-1 w-6 rounded-full bg-[#1fa37a]" /> Бохир усны шугам
               </span>
             </div>
-            <p className="text-[10px] leading-snug text-mist/80">* Схем нь бодит газарзүйн байршлыг харуулахгүй, ерөнхий бүтцийг илэрхийлнэ.</p>
+            <p className="text-[10px] leading-snug text-mist/80">* Бодит байршилд ойртуулсан схем (хойд зүг — баруун тийш); хэмжээ, зай нь ерөнхий.</p>
           </div>
         </div>
         {/* бүрхэгдэх тусам мап гүн рүү бараанна */}

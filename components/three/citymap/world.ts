@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { CORE, RIVER, riverDist, ROADS, roadY, terrainHeight, type P2, type Road } from "./layout";
+import { CORE, RIVER, riverDist, ROADS, roadY, ROUNDABOUT, terrainHeight, type P2, type Road } from "./layout";
 
 /**
  * Газар, гол, замын geometry. Бүгд нэг материалд нэг geometry (draw call цөөн).
@@ -68,7 +68,7 @@ export function riverGeometry() {
 // Зам: уулзварыг тооцоолж хэрчмүүдийг хуваана (уулзвар дээр тэмдэглэгээгүй дөрвөлжин, ирмэгт нь явган хүний гарц)
 
 type Crossing = { x: number; z: number; wx: number; wz: number };
-export type RoadPiece = { horizontal: boolean; c: number; a: number; b: number; w: number; major: boolean; ja: boolean; jb: boolean };
+export type RoadPiece = { horizontal: boolean; c: number; a: number; b: number; w: number; major: boolean; highway: boolean; ja: boolean; jb: boolean };
 
 const isH = (r: Road) => Math.abs(r.a[1] - r.b[1]) < 1e-6;
 
@@ -90,7 +90,7 @@ export function roadLayout() {
 
   // хэрчим бүрийг уулзваруудаар хувааж, уулзварын хагас өргөнөөр тайрна
   const pieces: RoadPiece[] = [];
-  const split = (horizontal: boolean, c: number, lo: number, hi: number, w: number, major: boolean) => {
+  const split = (horizontal: boolean, c: number, lo: number, hi: number, w: number, major: boolean, highway: boolean) => {
     const cuts = crossings
       .filter((k) => (horizontal ? Math.abs(k.z - c) < 0.01 && k.x >= lo - eps && k.x <= hi + eps : Math.abs(k.x - c) < 0.01 && k.z >= lo - eps && k.z <= hi + eps))
       .map((k) => ({ t: horizontal ? k.x : k.z, half: (horizontal ? k.wx : k.wz) / 2 }))
@@ -101,27 +101,32 @@ export function roadLayout() {
       const s1 = stops[i + 1];
       const a = s0.t + s0.half;
       const b = s1.t - s1.half;
-      if (b - a > 0.02) pieces.push({ horizontal, c, a, b, w, major, ja: s0.j, jb: s1.j });
+      if (b - a > 0.02) pieces.push({ horizontal, c, a, b, w, major, highway, ja: s0.j, jb: s1.j });
     }
   };
-  for (const h of H) split(true, h.c, h.lo, h.hi, h.r.w, h.r.major);
-  for (const v of V) split(false, v.c, v.lo, v.hi, v.r.w, v.r.major);
+  for (const h of H) split(true, h.c, h.lo, h.hi, h.r.w, h.r.major, !!h.r.highway);
+  for (const v of V) split(false, v.c, v.lo, v.hi, v.r.w, v.r.major, !!v.r.highway);
   return { pieces, crossings };
 }
+
+/** Тойргийн цагираг доогуур орох хэсэг: (x, z) цагираг (гадна радиус + m) дотор уу */
+export const inRoundabout = (x: number, z: number, m = 0) => Math.hypot(x - ROUNDABOUT.c[0], z - ROUNDABOUT.c[1]) < ROUNDABOUT.rOut + m;
 
 export type RoadLayout = ReturnType<typeof roadLayout>;
 
 /**
- * Замын гадаргуу: хэрчим ба уулзварын дөрвөлжин. Атрибут: aRoad (x — урт тэнхлэгийн дэлхийн координат,
- * y — хөндлөн −1..1, z — өргөн, w — major), aEnds (start/end хүртэлх зай; уулзвар биш бол их утга), aKind (0 хэрчим, 1 уулзвар).
+ * Замын гадаргуу: хэрчим, уулзварын дөрвөлжин, тойргийн цагираг. Атрибут: aRoad (x — урт тэнхлэгийн дэлхийн координат,
+ * y — хөндлөн −1..1, z — өргөн, w — төрөл: 0 гудамж, 1 өргөн чөлөө, 2 хоёр урсгалтай зам, 3 тойрог),
+ * aEnds (start/end хүртэлх зай; уулзвар биш бол их утга), aKind (0 хэрчим, 1 уулзвар).
  */
 export function roadGeometry(layout: RoadLayout) {
   const pos: number[] = [];
   const road: number[] = [];
   const ends: number[] = [];
   const kind: number[] = [];
+  // дээрээс харахад урд тал (normal +y) — эсрэг дараалал нь culling-д хасагдаж зам харагдахгүй байсан
   const quad = (corners: number[][], attrs: number[][], e: number[][], k: number) => {
-    for (const i of [0, 1, 2, 0, 2, 3]) {
+    for (const i of [0, 2, 1, 0, 3, 2]) {
       pos.push(corners[i][0], roadY(corners[i][0], corners[i][1]), corners[i][1]);
       road.push(...attrs[i]);
       ends.push(...e[i]);
@@ -130,7 +135,7 @@ export function roadGeometry(layout: RoadLayout) {
   };
   for (const p of layout.pieces) {
     const h = p.w / 2;
-    const m = p.major ? 1 : 0;
+    const m = p.highway ? 2 : p.major ? 1 : 0;
     const len = p.b - p.a;
     // урт хэрчмийг хувааж газрын гадаргууг дагуулна (хотоос гадна толгод, гол дээр гүүр)
     const n = Math.max(1, Math.ceil(len / 0.25));
@@ -184,6 +189,34 @@ export function roadGeometry(layout: RoadLayout) {
       1,
     );
   }
+  // тойргийн цагираг: салаа замуудын төгсгөлийг (rIn..rOut доторх) бага зэрэг дээрээс бүрхэнэ
+  {
+    const { c, rIn, rOut } = ROUNDABOUT;
+    const rMid = (rIn + rOut) / 2;
+    const width = rOut - rIn;
+    const n = 96;
+    const far = [99, 99];
+    const lift = 0.0012;
+    for (let k = 0; k < n; k++) {
+      const a0 = (k / n) * Math.PI * 2;
+      const a1 = ((k + 1) / n) * Math.PI * 2;
+      const pt = (r: number, a: number) => [c[0] + Math.cos(a) * r, c[1] + Math.sin(a) * r];
+      const corners = [pt(rIn, a0), pt(rIn, a1), pt(rOut, a1), pt(rOut, a0)];
+      const attrs = [
+        [a0 * rMid, -1, width, 3],
+        [a1 * rMid, -1, width, 3],
+        [a1 * rMid, 1, width, 3],
+        [a0 * rMid, 1, width, 3],
+      ];
+      // дээрээс харахад урд тал (normal +y)
+      for (const i of [0, 2, 3, 0, 1, 2]) {
+        pos.push(corners[i][0], roadY(corners[i][0], corners[i][1]) + lift, corners[i][1]);
+        road.push(...attrs[i]);
+        ends.push(...far);
+        kind.push(0);
+      }
+    }
+  }
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute("aRoad", new THREE.Float32BufferAttribute(road, 4));
@@ -206,18 +239,34 @@ export function sidewalkGeometry(layout: RoadLayout) {
   const parts: THREE.BufferGeometry[] = [];
   const SW = 0.034;
   const SH = 0.012;
+  const [rcx, rcz] = ROUNDABOUT.c;
   for (const p of layout.pieces) {
     const span = clipToCore(p);
     if (!span) continue;
-    const len = span[1] - span[0];
-    const mid = (span[0] + span[1]) / 2;
     for (const s of [-1, 1]) {
       const off = s * (p.w / 2 + SW / 2);
-      const g = p.horizontal
-        ? new THREE.BoxGeometry(len, SH, SW).translate(mid, SH / 2, p.c + off)
-        : new THREE.BoxGeometry(SW, SH, len).translate(p.c + off, SH / 2, mid);
-      g.deleteAttribute("uv");
-      parts.push(g);
+      // тойргийн цагираг дээгүүр гарах хэсгийг хасна
+      let spans: [number, number][] = [span];
+      const dc = p.c + off - (p.horizontal ? rcz : rcx);
+      const R = ROUNDABOUT.rOut + 0.01;
+      if (Math.abs(dc) < R) {
+        const ca = p.horizontal ? rcx : rcz;
+        const k = Math.sqrt(R * R - dc * dc);
+        spans = [
+          [span[0], Math.min(span[1], ca - k)],
+          [Math.max(span[0], ca + k), span[1]],
+        ];
+      }
+      for (const [a, b] of spans) {
+        const len = b - a;
+        if (len < 0.02) continue;
+        const mid = (a + b) / 2;
+        const g = p.horizontal
+          ? new THREE.BoxGeometry(len, SH, SW).translate(mid, SH / 2, p.c + off)
+          : new THREE.BoxGeometry(SW, SH, len).translate(p.c + off, SH / 2, mid);
+        g.deleteAttribute("uv");
+        parts.push(g);
+      }
     }
   }
   const merged = mergeGeometries(parts, false)!;
@@ -238,9 +287,20 @@ export function streetLightSpots(layout: RoadLayout, step: number) {
       const t = span[0] + ((i + 0.5) / n) * len;
       const side = (i + Math.round(p.c * 7)) % 2 === 0 ? 1 : -1;
       const off = side * (p.w / 2 + 0.03);
-      if (p.horizontal) out.push({ x: t, z: p.c + off, rot: side > 0 ? Math.PI : 0, road: [t, p.c] });
-      else out.push({ x: p.c + off, z: t, rot: side > 0 ? -Math.PI / 2 : Math.PI / 2, road: [p.c, t] });
+      const [x, z] = p.horizontal ? [t, p.c + off] : [p.c + off, t];
+      if (inRoundabout(x, z, 0.05)) continue;
+      if (p.horizontal) out.push({ x, z, rot: side > 0 ? Math.PI : 0, road: [t, p.c] });
+      else out.push({ x, z, rot: side > 0 ? -Math.PI / 2 : Math.PI / 2, road: [p.c, t] });
     }
+  }
+  // тойргийн гадна талын гэрэлтүүлэг (цагираг руу харсан)
+  const { c, rOut } = ROUNDABOUT;
+  for (let k = 0; k < 8; k++) {
+    const a = ((k + 0.5) / 8) * Math.PI * 2;
+    const x = c[0] + Math.cos(a) * (rOut + 0.04);
+    const z = c[1] + Math.sin(a) * (rOut + 0.04);
+    if (roadClearance(layout, x, z) < 0.03) continue;
+    out.push({ x, z, rot: 0, road: [c[0] + Math.cos(a) * rOut * 0.9, c[1] + Math.sin(a) * rOut * 0.9] });
   }
   return out;
 }
@@ -256,5 +316,8 @@ export function roadClearance(layout: RoadLayout, x: number, z: number) {
     best = Math.min(best, Math.max(da, dc));
   }
   for (const c of layout.crossings) best = Math.min(best, Math.max(Math.abs(x - c.x) - c.wx / 2, Math.abs(z - c.z) - c.wz / 2));
+  // тойргийн цагираг
+  const { c, rIn, rOut } = ROUNDABOUT;
+  best = Math.min(best, Math.abs(Math.hypot(x - c[0], z - c[1]) - (rIn + rOut) / 2) - (rOut - rIn) / 2);
   return best;
 }

@@ -108,7 +108,7 @@ export default function Hero() {
               </p>
               <h1
                 ref={title}
-                aria-label="Дархан Ус Суваг ОНӨААТҮГ"
+                aria-label="“Дархан Ус Суваг” ХК"
                 className={`font-display text-[length:min(calc(var(--u)*6.8),15vw)] font-bold leading-[0.95] tracking-tight transition-opacity duration-700 lg:text-[length:calc(var(--u)*7.4)] ${ready ? "opacity-0" : ""}`}
               >
                 {lines.map((ws) => (

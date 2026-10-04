@@ -72,7 +72,8 @@ export function useCityPostFX(enabled: boolean, still: boolean, samples = 4) {
   const size = useThree((s) => s.size);
 
   const fx = useMemo<FX | null>(() => {
-    if (!enabled) return null;
+    // HDR (HalfFloat) render target-д бичих боломжгүй GPU дээр шууд зурна (хар дэлгэц гаргахгүй)
+    if (!enabled || !(gl.extensions.has("EXT_color_buffer_float") || gl.extensions.has("EXT_color_buffer_half_float"))) return null;
     // canvas-ийн MSAA render target-д үйлчлэхгүй тул ирмэгийн гөлгөр байдлыг энд хадгална
     const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples });
     const composer = new EffectComposer(gl, target);

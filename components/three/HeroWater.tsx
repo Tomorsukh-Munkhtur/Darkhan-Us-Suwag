@@ -287,6 +287,15 @@ function Water({ title, dive, reduced, onReady }: Omit<Props, "running">) {
   );
   useEffect(() => () => material.dispose(), [material]);
 
+  // HalfFloat render target-д бичих боломжгүй төхөөрөмж (зарим хуучин GPU) — долгионгүй тэгш ус (симуляцгүй)
+  const simOk = useMemo(() => gl.extensions.has("EXT_color_buffer_float") || gl.extensions.has("EXT_color_buffer_half_float"), [gl]);
+  const flat = useMemo(() => {
+    const t = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1);
+    t.needsUpdate = true;
+    return t;
+  }, []);
+  useEffect(() => () => flat.dispose(), [flat]);
+
   // Долгионы симуляц: босоо тэнхлэгт 1.6 дахин олон texel → цагираг хавтгай (перспектив) харагдана
   const sim = useMemo(() => {
     const w = size.width > 900 ? 320 : 200;
@@ -436,6 +445,12 @@ function Water({ title, dive, reduced, onReady }: Omit<Props, "running">) {
       nextRain.current = t + 0.8 + Math.random() * 2.2;
     }
 
+    if (!simOk) {
+      drops.current.length = 0;
+      u.uRipple.value = flat;
+      u.uSimTexel.value.set(1, 1);
+      return;
+    }
     const pass = (mat: THREE.ShaderMaterial) => {
       mat.uniforms.uState.value = sim.targets[sim.cur].texture;
       sim.quad.material = mat;

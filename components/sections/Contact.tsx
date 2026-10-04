@@ -140,7 +140,7 @@ export default function Contact() {
               </nav>
               <p className="text-xs leading-relaxed text-mist">
                 УС ЭХЭЛНЭ → ЦЭВЭРШИНЭ → ХОТ РУУ ХҮРНЭ → БУЦНА → ДАХИН ЭХЭЛНЭ
-                <br />© {new Date().getFullYear()} Дархан Ус Суваг ОНӨААТҮГ
+                <br />© {new Date().getFullYear()} “Дархан Ус Суваг” ХК
               </p>
             </div>
           </div>

@@ -1,22 +1,38 @@
 import { seeded } from "@/lib/seeded";
 import {
+  BILEG_MOUND,
+  BUDDHA_HILL,
   CORE,
+  districtLots,
   DISTRICTS,
+  FOOTBRIDGE,
+  GER_AREAS,
+  HIGHWAY,
+  HIGHWAY_LANES,
+  moundHeight,
+  MORIN_KHUUR,
   nearestCleanD,
+  OVOO_HILL,
   PIPES,
   PLANT,
   PUMPS,
-  RESERVOIR,
+  railZ,
+  RESERVED,
+  RESERVOIRS,
   RIVER_HALF,
   riverAt,
   riverDist,
+  ROUNDABOUT,
   SOURCE_ZONE,
   terrainHeight,
   WELLS,
-  type District,
   type Network,
+  type Rect,
 } from "./layout";
-import { clipToCore, roadClearance, type RoadLayout } from "./world";
+import { clipToCore, inRoundabout, roadClearance, type RoadLayout } from "./world";
+import { civicKeepOut, civicTrees } from "./civic";
+
+export { districtLots, type Rect } from "./layout";
 
 /**
  * Барилга (instanced) ба модны байрлалын генератор. Детерминистик (seeded) — SSR/клиент, түвшин бүрт ижил дараалал;
@@ -41,29 +57,6 @@ export type Building = {
   /** өргөн чөлөөний дагуух доод давхрын дэлгүүр */
   shop?: boolean;
 };
-export type Rect = { x0: number; x1: number; z0: number; z1: number };
-
-const SIDEWALK = 0.034;
-
-function roadHalf(d: District, axis: "x" | "y", i: number) {
-  // дүүргийн эхний хэвтээ гудамж нь өргөн чөлөө
-  const major = axis === "y" && i === 0;
-  return (major ? 0.16 : 0.1) / 2 + SIDEWALK + 0.03;
-}
-
-export function districtLots(d: District) {
-  const lots: Rect[] = [];
-  for (let i = 0; i < d.xs.length - 1; i++)
-    for (let j = 0; j < d.ys.length - 1; j++)
-      lots.push({
-        x0: d.xs[i] + roadHalf(d, "x", i),
-        x1: d.xs[i + 1] - roadHalf(d, "x", i + 1),
-        z0: d.ys[j] + roadHalf(d, "y", j),
-        z1: d.ys[j + 1] - roadHalf(d, "y", j + 1),
-      });
-  return lots;
-}
-
 const overlaps = (r: Rect, list: Rect[], m: number) => list.some((q) => r.x0 < q.x1 + m && r.x1 > q.x0 - m && r.z0 < q.z1 + m && r.z1 > q.z0 - m);
 const footprint = (b: Building): Rect => {
   const hx = (b.rot ? b.d : b.w) / 2;
@@ -82,7 +75,7 @@ export function generateBuildings(net: Network, layout: RoadLayout) {
         const full: Building = { ...b, seed: rnd(), dist: 0, district: di };
         const fp = footprint(full);
         if (fp.x0 < lot.x0 - 1e-3 || fp.x1 > lot.x1 + 1e-3 || fp.z0 < lot.z0 - 1e-3 || fp.z1 > lot.z1 + 1e-3) return false;
-        if (overlaps(fp, placed, 0.035)) return false;
+        if (overlaps(fp, placed, 0.035) || overlaps(fp, RESERVED, 0.01)) return false;
         placed.push(fp);
         out.push(full);
         return true;
@@ -128,11 +121,12 @@ export function generateBuildings(net: Network, layout: RoadLayout) {
           x += len + r(0.06, 0.14);
         }
       };
+      // хөндлөн байр: хоёр эгнээний хооронд (жижиг хашаанд богино байр — хаалттай хороолол)
       const runZ = (x: number) => {
-        let z = lot.z0 + depth + 0.09 + r(0, 0.05);
-        while (z < lot.z1 - depth - 0.25) {
-          const len = r(0.3, 0.52);
-          if (z + len > lot.z1 - depth - 0.08) break;
+        const zEnd = lot.z1 - setback - depth - 0.038;
+        let z = lot.z0 + setback + depth + 0.038 + r(0, 0.02);
+        while (zEnd - z >= 0.16) {
+          const len = Math.min(r(0.2, 0.52), zEnd - z);
           push({ x, z: z + len / 2, w: len, d: depth, h: floors() * FLOOR_H, rot: true, kind: isNew ? 1 : 0 });
           z += len + r(0.07, 0.15);
         }
@@ -199,6 +193,7 @@ export function generateCars(layout: RoadLayout, density: number) {
       if (rnd() > density) return;
       const x = p.horizontal ? t : p.c + off;
       const z = p.horizontal ? p.c + off : t;
+      if (inRoundabout(x, z, 0.02)) return;
       // орон нутгийн +x урагш: хэвтээ зам — ±x, босоо — ±z
       const rot = p.horizontal ? (dir > 0 ? 0 : Math.PI) : dir > 0 ? -Math.PI / 2 : Math.PI / 2;
       out.push({ x, z, rot, moving, tint: rnd() });
@@ -207,7 +202,13 @@ export function generateCars(layout: RoadLayout, density: number) {
     const mid = (a + b) / 2;
     const [mx, mz] = p.horizontal ? [mid, p.c] : [p.c, mid];
     const urban = DISTRICTS.some((d) => mx > d.xs[0] - 0.05 && mx < d.xs[d.xs.length - 1] + 0.05 && mz > d.ys[0] - 0.05 && mz < d.ys[d.ys.length - 1] + 0.05);
-    if (p.major) {
+    if (p.highway) {
+      // хоёр урсгал, тус бүр 2 эгнээ (баруун гар талын хөдөлгөөн)
+      for (const lane of HIGHWAY_LANES.flatMap((l) => [-l, l])) {
+        const dir = p.horizontal ? (lane > 0 ? 1 : -1) : lane > 0 ? -1 : 1;
+        for (let t = a + rnd() * 0.1; t < b; t += 0.08 + rnd() * 0.16) if (rnd() < 0.3) put(t, lane, dir, true);
+      }
+    } else if (p.major) {
       const pMove = urban ? 0.34 : 0.16;
       for (const lane of [-0.054, -0.02, 0.02, 0.054]) {
         const dir = p.horizontal ? (lane > 0 ? 1 : -1) : lane > 0 ? -1 : 1;
@@ -219,6 +220,18 @@ export function generateCars(layout: RoadLayout, density: number) {
         const dir = p.horizontal ? side : -side;
         for (let t = a + rnd() * 0.2; t < b; t += 0.2 + rnd() * 0.3) if (rnd() < (urban ? 0.35 : 0.1)) put(t, side * 0.018, dir, true);
       }
+    }
+  }
+  // тойрог дээрх машин: цагийн зүүний эсрэг (дээрээс харахад) — өнцөг буурах чиглэлд
+  const { c, rIn, rOut } = ROUNDABOUT;
+  for (const [rr, n] of [
+    [rIn + (rOut - rIn) * 0.3, 3],
+    [rIn + (rOut - rIn) * 0.7, 4],
+  ] as const) {
+    for (let k = 0; k < n; k++) {
+      if (rnd() > density) continue;
+      const ang = (k / n) * Math.PI * 2 + rnd() * 0.8;
+      out.push({ x: c[0] + Math.cos(ang) * rr, z: c[1] + Math.sin(ang) * rr, rot: Math.atan2(Math.cos(ang), Math.sin(ang)), moving: true, tint: rnd() });
     }
   }
   return out;
@@ -248,22 +261,40 @@ export function generateTrees(layout: RoadLayout, buildings: Building[], density
   const r = (a: number, b: number) => a + (b - a) * rnd();
   const fps = buildings.map(footprint);
   const out: Tree[] = [];
-  const blocked = (x: number, z: number, m = 0.035) => {
+  const fb = FOOTBRIDGE;
+  const inRect = (x: number, z: number, q: Rect, m = 0) => x > q.x0 - m && x < q.x1 + m && z > q.z0 - m && z < q.z1 + m;
+  /** Дурсгалт газрын талбай (оройн тавцан, шат, гүүр, байр, цогцолбор, тойргийн арал, нийтийн барилгын хашаа, төмөр зам) */
+  const landmark = (x: number, z: number) => {
+    const bh = BUDDHA_HILL;
+    if (Math.hypot(x - bh.x, z - bh.z) < 0.17 || (Math.abs(x - (bh.x - 0.1)) < 0.06 && z > bh.z && z < bh.z + bh.r + 0.03)) return true;
+    const bm = BILEG_MOUND;
+    if (Math.hypot(x - bm.x, z - bm.z) < 0.1 || (Math.abs(x - bm.x) < 0.05 && z > bm.z && z < bm.z + bm.r + 0.03)) return true;
+    if (Math.hypot(x - MORIN_KHUUR.x, z - MORIN_KHUUR.z) < MORIN_KHUUR.r + 0.06) return true;
+    if (Math.abs(x - fb.x) < 0.07 && z > fb.z0 - 0.05 && z < fb.z1 + fb.stairs + 0.05) return true;
+    if (Math.hypot(x - OVOO_HILL.x, z - OVOO_HILL.z) < 0.1) return true;
+    if (Math.abs(z - railZ(x)) < 0.12) return true;
+    if (RESERVED.some((q) => inRect(x, z, q))) return true;
+    if (civicKeepOut(x, z)) return true;
+    return Math.hypot(x - ROUNDABOUT.c[0], z - ROUNDABOUT.c[1]) < ROUNDABOUT.rOut + 0.03;
+  };
+  const blocked = (x: number, z: number, m = 0.035, road = true) => {
     if (riverDist(x, z) < RIVER_HALF + 0.12) return true;
-    if (roadClearance(layout, x, z) < 0.05) return true;
+    if (road && roadClearance(layout, x, z) < 0.05) return true;
+    if (landmark(x, z)) return true;
     if (fps.some((q) => x > q.x0 - m && x < q.x1 + m && z > q.z0 - m && z < q.z1 + m)) return true;
     if (pipeDist(x, z) < 0.06) return true;
     if (WELLS.some(([wx, wz]) => Math.hypot(x - wx, z - wz) < 0.2)) return true;
     if (PUMPS.some(([px, pz]) => Math.hypot(x - px, z - pz) < 0.32)) return true;
-    if (Math.hypot(x - RESERVOIR.c[0], z - RESERVOIR.c[1]) < RESERVOIR.r + 0.18) return true;
+    if (RESERVOIRS.some((t) => Math.hypot(x - t.c[0], z - t.c[1]) < t.r + 0.12)) return true;
+    if (GER_AREAS.some((q) => inRect(x, z, q, 0.02)) && rnd() < 0.85) return true;
     const pp = PLANT.pad;
     if (x > pp.x0 - 0.05 && x < pp.x1 + 0.05 && z > pp.z0 - 0.05 && z < pp.z1 + 0.05) return true;
     return false;
   };
-  const add = (x: number, z: number, s: number, conifer: boolean) => {
+  const add = (x: number, z: number, s: number, conifer: boolean, road = true) => {
     if (rnd() > density) return;
-    if (blocked(x, z)) return;
-    out.push({ x, y: terrainHeight(x, z), z, s, conifer, tint: rnd() });
+    if (blocked(x, z, 0.035, road)) return;
+    out.push({ x, y: terrainHeight(x, z) + moundHeight(x, z), z, s, conifer, tint: rnd() });
   };
 
   // хашааны мод
@@ -274,9 +305,47 @@ export function generateTrees(layout: RoadLayout, buildings: Building[], density
       for (let k = 0; k < n; k++) add(r(lot.x0, lot.x1), r(lot.z0, lot.z1), r(0.75, 1.15), false);
     }
   });
+  // хоёр урсгалтай зам: тусгаарлагч ба хоёр талын зурвасын мод (хотын хүрээнд, уулзвар/гүүрнээс зайтай)
+  const nearCrossing = (x: number, z: number) => layout.crossings.some((c) => Math.abs(x - c.x) < c.wx / 2 + 0.03 && Math.abs(z - c.z) < c.wz / 2 + 0.05);
+  for (const p of layout.pieces) {
+    const span = p.highway ? clipToCore(p) : null;
+    if (!span) continue;
+    for (const [off, step] of [
+      [0, 0.075],
+      [-(HIGHWAY.carriage + HIGHWAY.strip) / 2, 0.09],
+      [(HIGHWAY.carriage + HIGHWAY.strip) / 2, 0.09],
+    ] as const)
+      for (let t = span[0] + 0.05 + rnd() * 0.03; t < span[1] - 0.05; t += step) {
+        const x = p.horizontal ? t : p.c + off;
+        const z = p.horizontal ? p.c + off : t;
+        if (nearCrossing(x, z) || inRoundabout(x, z, 0.06)) continue;
+        add(x, z, off === 0 ? r(0.62, 0.78) : r(0.66, 0.84), false, false);
+      }
+  }
+  // Бурхантай уул, Билэг тэмдэг, Дархан овоогийн толгодын энгэрийн мод
+  for (const [m, n] of [
+    [BUDDHA_HILL, 46],
+    [BILEG_MOUND, 8],
+    [OVOO_HILL, 22],
+  ] as const)
+    for (let k = 0; k < n; k++) {
+      const a = rnd() * Math.PI * 2;
+      const q = r(0.42, 0.95);
+      add(m.x + Math.cos(a) * m.r * q, m.z + Math.sin(a) * m.r * q, r(0.7, 1.0), rnd() < 0.45);
+    }
+  // тойргийн арал дээрх бут
+  for (let k = 0; k < 4; k++) {
+    const a = Math.PI / 4 + (k * Math.PI) / 2;
+    out.push({ x: ROUNDABOUT.c[0] + Math.cos(a) * 0.255, y: 0.0085, z: ROUNDABOUT.c[1] + Math.sin(a) * 0.255, s: 0.55, conifer: true, tint: rnd() });
+  }
+  // нийтийн байгууламж, цэцэрлэгт хүрээлэнгийн мод (civic.ts тодорхойлно)
+  for (const t of civicTrees()) {
+    if (rnd() > Math.max(density, 0.6)) continue;
+    out.push({ x: t.x, y: terrainHeight(t.x, t.z) + moundHeight(t.x, t.z), z: t.z, s: t.s, conifer: t.conifer, tint: rnd() });
+  }
   // өргөн чөлөөний дагуух мод
   for (const p of layout.pieces) {
-    if (!p.major) continue;
+    if (!p.major || p.highway) continue;
     for (let t = p.a + 0.08; t < p.b - 0.08; t += 0.16)
       for (const s of [-1, 1]) {
         const off = s * (p.w / 2 + 0.07);

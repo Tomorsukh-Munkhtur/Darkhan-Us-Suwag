@@ -7,7 +7,7 @@ import { createBackdropMaterial } from "../journey/materials/fx";
 import { TIERS, type QualityTier } from "../journey/quality";
 import { useDisposable } from "../journey/utils/useDisposable";
 import type { TreatmentRuntime } from "./runtime";
-import { armAngle, BUILDING, createTreatmentState, LAMPS, OUTLET, PLINTH, TANKS, treatmentState } from "./layout";
+import { armAngle, BUILDING, createTreatmentState, LAMPS, OUTLET, PLINTH, TANKS, treatmentState, type TankIndex } from "./layout";
 import { bodyGeometry, emissiveGeometry, glowGeometry, plinthGeometry, waterGeometry } from "./geometry";
 import {
   bodyMaterial,
@@ -191,19 +191,20 @@ function Stage({ rt, tier, running, onReady }: { rt: TreatmentRuntime; tier: Qua
     U.uDim.value = state.dim;
     for (let i = 0; i < state.grow.length; i++) U.uGrow.value[i] = state.grow[i];
     for (let i = 0; i < state.lit.length; i++) U.uLit.value[i] = state.lit[i];
-    U.uLevel.value[0] = state.level[0];
-    U.uLevel.value[1] = state.level[1];
-    U.uFill.value[0] = state.fill[0];
-    U.uFill.value[1] = state.fill[1];
+    for (let i = 0; i < 3; i++) {
+      U.uLevel.value[i] = state.level[i];
+      U.uFill.value[i] = state.fill[i];
+    }
     U.uActiveL.value = state.activeL;
-    U.uClean.value = state.clean;
-    U.uChannel.value = state.channel;
+    for (let i = 0; i < 2; i++) {
+      U.uClean.value[i] = state.clean[i];
+      U.uChannel.value[i] = state.channel[i];
+    }
     U.uOutlet.value = state.outlet;
     U.uCascade.value = state.cascade;
     U.uActive.value = state.active;
     // --- чимэглэл: гүүрний удаан эргэлт, урсгалын фаз (scroll + ambient), гялбаа, гэрлийн амьсгал
-    U.uSpin.value[0] = armAngle(0, p, t);
-    U.uSpin.value[1] = armAngle(1, p, t);
+    for (let i = 0; i < 3; i++) U.uSpin.value[i] = armAngle(i as TankIndex, p, t);
     U.uPhase.value = p * 5 + t * 0.8;
     U.uShimmer.value = t;
     U.uBreath.value = amb ? Math.sin(t * 1.3) : 0;

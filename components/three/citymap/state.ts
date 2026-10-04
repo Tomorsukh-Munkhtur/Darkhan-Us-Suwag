@@ -106,27 +106,28 @@ export type Shot = {
   focus: boolean;
 };
 
+/** Хойд зүг +x (баруун), зүүн зүг +z (камер руу): эх үүсвэр — Хараа голын эрэг (баруун-ард), насос станц ба усан сан —
+ *  төмөр зам ба авто замын хооронд, цэвэрлэх байгууламж — хамгийн хойд (баруун) талд */
 const S: Shot[] = [
-  { target: [-5.0, -2.55], ground: 6.4, az: -6, el: 50, focus: true },
-  { target: [-2.2, -1.25], ground: 5.4, az: 7, el: 52, focus: true },
-  { target: [-2.0, -2.0], ground: 4.8, az: -4, el: 54, focus: true },
-  { target: [0.1, 0.35], ground: 9.6, az: 0, el: 55, focus: false },
-  { target: [6.3, -2.05], ground: 5.6, az: 9, el: 52, focus: true },
-  { target: [0.2, 0.45], ground: 9.2, az: -5, el: 58, focus: false },
+  { target: [4.15, -2.45], ground: 5.6, az: -5, el: 50, focus: true },
+  { target: [2.25, -1.35], ground: 4.9, az: 6, el: 53, focus: true },
+  { target: [1.3, -0.5], ground: 4.4, az: -4, el: 55, focus: true },
+  { target: [-0.6, 0.55], ground: 10.6, az: 0, el: 56, focus: false },
+  { target: [7.15, -0.8], ground: 5.0, az: 8, el: 52, focus: true },
+  { target: [-0.55, 0.65], ground: 10.6, az: -4, el: 58, focus: false },
 ];
 export const SHOTS = S;
 /**
- * Mobile (босоо нарийн дэлгэц): тойм зураглал нь хороолол хоорондын хоосон талбайг харуулахгүйн тулд
- * 4-р алхамд насос станц → Хуучин Дархан руу салах сүлжээ, 6-р алхамд Хуучин Дархны гэрэлтэй байрууд руу.
- * 2-р алхамд I насос станц зүүн талын алхмын жагсаалтын ард орохгүйн тулд фокусыг түүн рүү ойртуулна.
+ * Mobile (босоо нарийн дэлгэц): тойм зураглалын оронд 4-р алхамд төв хэсэг → Шинэ Дархан, 6-р алхамд Хуучин Дархны
+ * гэрэлтэй байрууд руу. 2-р алхамд I насос станцаас усан сан руу чиглэсэн шугам руу ойртуулна.
  */
 const MOBILE: (Partial<Shot> | null)[] = [
   null,
-  { target: [-2.85, -1.4], ground: 5.2 },
+  { target: [2.4, -1.5], ground: 5.0 },
   null,
-  { target: [-2.7, 0.15], ground: 6.2, focus: true },
+  { target: [-0.4, 1.4], ground: 6.0, focus: true },
   null,
-  { target: [-4.3, 1.45], ground: 5.6, focus: true },
+  { target: [4.3, 1.6], ground: 5.6, focus: true },
 ];
 const shotFor = (i: number, mobile: boolean): Shot => (mobile && MOBILE[i] ? { ...S[i], ...MOBILE[i] } : S[i]);
 

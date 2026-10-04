@@ -14,6 +14,7 @@ import { generateBuildings, generateCars, generateTrees, type Building, type Car
 import { facilityGeometry, KEY } from "./facilities";
 import { pipeGeometry, pipeJoints, pipeSaddles } from "./pipes";
 import { buildingCasters, pipeCasters, shadowMesh, treeCasters } from "./shadows";
+import { gerCasters, gerMeshes, generateGerPlots } from "./ger";
 import {
   buildingMaterial,
   createCityUniforms,
@@ -22,6 +23,7 @@ import {
   facilityMaterial,
   facilityWaterMaterial,
   FOG_COLOR,
+  gerMaterial,
   jointMaterial,
   pipeGlowMaterial,
   pipeMaterial,
@@ -275,6 +277,7 @@ function Stage({
   const joints = useMemo(() => pipeJoints(net), [net]);
   const cars = useMemo(() => generateCars(layout, Math.min(1, density * 1.1)), [layout, density]);
   const saddles = useMemo(() => pipeSaddles(), []);
+  const gerPlots = useMemo(() => generateGerPlots(density), [density]);
 
   // --- материал
   const U = useMemo(createCityUniforms, []);
@@ -305,6 +308,7 @@ function Stage({
   const poolMat = useDisposable(poolMaterial, []);
   const shadowMat = useDisposable(() => shadowMaterial(U), [U]);
   const propMat = useDisposable(() => propMaterial(U), [U]);
+  const gerMat = useDisposable(() => gerMaterial(U), [U]);
 
   // --- geometry
   const terrainGeo = useDisposable(() => terrainGeometry(cfg.terrain[0], cfg.terrain[1]), [cfg.terrain]);
@@ -329,10 +333,11 @@ function Stage({
   const carsMesh = useMemo(() => carMesh(cars, propMat), [cars, propMat]);
   const saddlesMesh = useMemo(() => saddleMesh(saddles, propMat), [saddles, propMat]);
   const shadows = useMemo(
-    () => shadowMesh([...buildingCasters(buildings), ...treeCasters(trees), ...fac.shadows, ...pipeCasters()], shadowMat),
-    [buildings, trees, fac, shadowMat],
+    () => shadowMesh([...buildingCasters(buildings), ...treeCasters(trees), ...fac.shadows, ...pipeCasters(), ...gerCasters(gerPlots)], shadowMat),
+    [buildings, trees, fac, gerPlots, shadowMat],
   );
   const roundTrees = useMemo(() => treeMesh(trees, false, treeMat), [trees, treeMat]);
+  const gerList = useMemo(() => gerMeshes(gerPlots, gerMat), [gerPlots, gerMat]);
   const conifers = useMemo(() => treeMesh(trees, true, treeMat), [trees, treeMat]);
   const jointMesh = useMemo(() => {
     const geo = new THREE.CylinderGeometry(1, 1, 1, 12).translate(0, 0.5, 0);
@@ -389,12 +394,12 @@ function Stage({
   }, [lights, poleMat, lampMat, poolMat, cfg.fx]);
   useEffect(
     () => () => {
-      for (const mesh of [bldMesh, roundTrees, conifers, jointMesh, poles, lamps, pools, carsMesh, saddlesMesh, shadows]) {
+      for (const mesh of [bldMesh, roundTrees, conifers, jointMesh, poles, lamps, pools, carsMesh, saddlesMesh, shadows, ...gerList]) {
         mesh.geometry.dispose();
         mesh.dispose();
       }
     },
-    [bldMesh, roundTrees, conifers, jointMesh, poles, lamps, pools, carsMesh, saddlesMesh, shadows],
+    [bldMesh, roundTrees, conifers, jointMesh, poles, lamps, pools, carsMesh, saddlesMesh, shadows, gerList],
   );
 
   // --- DOM шошго (lazy chunk дотор үүсгэнэ — эхний bundle-д layout өгөгдөл орохгүй)
@@ -520,6 +525,9 @@ function Stage({
       <primitive object={poles} />
       <primitive object={carsMesh} />
       <primitive object={saddlesMesh} />
+      {gerList.map((m, i) => (
+        <primitive key={i} object={m} />
+      ))}
       <primitive object={shadows} renderOrder={2} />
       <mesh geometry={fac.body} material={facMat} />
       <mesh geometry={fac.lights} material={facLightMat} />

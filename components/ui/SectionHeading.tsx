@@ -13,7 +13,7 @@ export default function SectionHeading({
   title: React.ReactNode;
   lead?: string;
   align?: "left" | "center";
-  /** true — гарч ирэх (fade) хөдөлгөөнгүй, үргэлж тод (жишээ нь CustomerServices) */
+  /** true — гарч ирэх (fade) хөдөлгөөнгүй, үргэлж тод (жишээ нь Values — мапын дээгүүр гарах хэсэг) */
   still?: boolean;
 }) {
   const box = align === "center" ? "mx-auto max-w-3xl text-center" : "max-w-3xl";
