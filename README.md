@@ -25,7 +25,9 @@ npm run build && npm start
 ## Бүтэц
 
 ```
-app/                     layout, page, global styles
+app/                     layout, global styles
+  page.tsx               нүүр хуудас (/): хоёр хагас дэлгэц — Танилцуулга (/intro) ба албан ёсны сайт (dus.mn); текст нь lib/content.ts → gateway
+  intro/page.tsx         танилцуулга (/intro): усны аяллын storytelling (доорх бүх хэсэг)
 components/
   SmoothScroll.tsx       Lenis ↔ ScrollTrigger синк
   Navbar.tsx             desktop цэс + mobile ☰

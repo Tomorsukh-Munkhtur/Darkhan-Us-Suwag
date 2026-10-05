@@ -5,7 +5,8 @@ import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "framer-motio
 import { contact, nav } from "@/lib/content";
 import { LogoMark } from "./ui/Logo";
 
-const items = [{ label: "Нүүр", href: "#top" }, ...nav];
+// "Нүүр" — хоёр сонголттой нүүр хуудас (/) руу; бусад нь танилцуулгын хэсгүүд (#…)
+const items = [{ label: "Нүүр", href: "/" }, ...nav];
 // Лого голд: хоёр талд тэнцүү
 const left = items.slice(0, Math.ceil(items.length / 2));
 const right = items.slice(left.length);
@@ -140,7 +141,7 @@ export default function Navbar() {
   const [surface, setSurface] = useState(true);
   // доош гүйлгэхэд нуугдаж, дээш гүйлгэхэд гарна (Hero-ийн шумбалтын үед үргэлж харагдана)
   const [hidden, setHidden] = useState(false);
-  const [active, setActive] = useState<string | null>("#top");
+  const [active, setActive] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [lang, setLang] = useState<"en" | "mn">("mn");
@@ -149,7 +150,8 @@ export default function Navbar() {
 
   useEffect(() => {
     const deep = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0.9 : 0.25;
-    const targets = items.map((n) => ({ href: n.href, el: document.querySelector<HTMLElement>(n.href) }));
+    // scroll-spy зөвхөн хуудсан доторх хэсгүүдэд ("/" — өөр хуудас)
+    const targets = items.filter((n) => n.href.startsWith("#")).map((n) => ({ href: n.href, el: document.querySelector<HTMLElement>(n.href) }));
     const lightZone = document.getElementById("light-zone");
     // цайвар хэсгүүдийн дундах dark хэсэг (Усны чанар) — navbar дор нь байвал бараан
     const darkZones = [...document.querySelectorAll<HTMLElement>("[data-nav-dark]")];
@@ -252,7 +254,7 @@ export default function Navbar() {
 
             {/* Голын лого — самбараас дээш, доош цухуйна; тойрог нь хуудсыг хэр гүйлгэснийг харуулна */}
             <a
-              href="#top"
+              href="/"
               aria-label="Нүүр хуудас"
               className={`nav-logo group relative grid place-items-center rounded-full transition-all duration-500 ${
                 scrolled ? "h-16 w-16 p-1.5 lg:h-19 lg:w-19" : "h-20 w-20 p-2 lg:h-27 lg:w-27"

@@ -10,8 +10,15 @@ import WaterQuality from "@/components/sections/WaterQuality";
 import CityMap from "@/components/sections/CityMap";
 import Values from "@/components/sections/Values";
 import Contact from "@/components/sections/Contact";
+import type { Metadata } from "next";
 
-export default function Home() {
+export const metadata: Metadata = {
+  title: "Танилцуулга — “Дархан Ус Суваг” ХК",
+  description: "Усны аялал: эх үүсвэрээс таны гэр хүртэл. Дархан хотын 3D мап, бидний үйл ажиллагаа, усны чанар.",
+};
+
+/** Танилцуулга (усны аяллын storytelling) — нүүр хуудаснаас (/) орно */
+export default function Intro() {
   return (
     <>
       <SmoothScroll />
