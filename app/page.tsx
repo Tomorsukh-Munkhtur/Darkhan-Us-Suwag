@@ -23,7 +23,7 @@ function PanelText({ p, external }: { p: typeof gateway.intro; external?: boolea
         {p.step} · {p.label}
       </p>
       <h2 className="mt-3 font-display text-[clamp(2.25rem,1.2rem+4vw,4.75rem)] font-bold leading-none tracking-tight text-abyss">{p.title}</h2>
-      <p className="mt-4 text-sm leading-relaxed text-abyss/80 sm:text-base">{p.text}</p>
+      <p className="mt-4 text-justify text-sm leading-relaxed text-abyss/80 sm:text-base">{p.text}</p>
       <span className="mt-6 inline-flex items-center gap-3 sm:mt-7 rounded-full border border-abyss/25 bg-abyss/10 px-6 py-3 font-display text-sm font-semibold text-abyss backdrop-blur-sm transition-colors duration-300 group-hover/panel:border-aqua group-hover/panel:bg-aqua group-hover/panel:text-foam group-focus-visible/panel:border-aqua group-focus-visible/panel:bg-aqua group-focus-visible/panel:text-foam">
         {p.cta}
         <span aria-hidden className="transition-transform duration-300 group-hover/panel:translate-x-1">

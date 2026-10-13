@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef } from "react";
 import { gsap } from "gsap";
+import { prefersReducedMotion } from "@/lib/motion";
 
 /** Долгионы бүрэлдэхүүн: A — өндөр (px), L — долгионы урт (px), c — хурд (px/s, хасах нь эсрэг чиглэл), Q — оргилын хурц (Gerstner), p — фаз */
 type Comp = { A: number; L: number; c: number; Q: number; p: number };
@@ -133,7 +134,7 @@ export default function WaterEdge({ variant = "lively" }: { variant?: Variant })
       on: false,
       wave: WAVES[variant],
     };
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduced = prefersReducedMotion();
 
     const ro = new ResizeObserver(() => {
       e.w = el.clientWidth;

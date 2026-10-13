@@ -6,13 +6,14 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { RENDER_PRIORITY, useRenderSlot } from "@/components/three/renderCoordinator";
 import { hasWebGL2 } from "@/components/three/journey/utils/browser";
+import { prefersReducedMotion, MQ_MOTION_OK, MQ_MOTION_REDUCED } from "@/lib/motion";
 
 gsap.registerPlugin(ScrollTrigger);
 
 const HeroWater = dynamic(() => import("@/components/three/HeroWater"), { ssr: false });
 
 /** Гарчгийн мөрүүд: утсан дээр мөр бүр тусдаа, desktop дээр бүгд нэг мөрөнд */
-const lines = [["ДАРХАН"], ["УС", "СУВАГ"]];
+const lines = [["“ДАРХАН-УС"], ["СУВАГ”", "ХК"]];
 
 /**
  * Давхаргууд: тунгалаг ус (WebGL) → УС БҮХНИЙ ЭХЛЭЛ.
@@ -38,7 +39,7 @@ export default function Hero() {
 
   useEffect(() => {
     // WebGL2 байхгүй бол canvas үүсгэхгүй (үүсгэвэл R3F алдаа шидэж хуудсыг унагана) — HTML гарчиг хэвээр харагдана
-    if (hasWebGL2()) setWebgl({ reduced: window.matchMedia("(prefers-reduced-motion: reduce)").matches });
+    if (hasWebGL2()) setWebgl({ reduced: prefersReducedMotion() });
     // Дэлгэцээс гарвал WebGL-ийг зогсооно
     const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting));
     io.observe(root.current!);
@@ -47,7 +48,7 @@ export default function Hero() {
 
   useEffect(() => {
     const mm = gsap.matchMedia();
-    mm.add("(prefers-reduced-motion: no-preference)", () => {
+    mm.add(MQ_MOTION_OK, () => {
       gsap
         .timeline({ defaults: { ease: "expo.out" } })
         // Зөвхөн дотроо анимацтай wrapper; бусад нь өөрсдийн fromTo-гоор гарч ирнэ
@@ -79,7 +80,7 @@ export default function Hero() {
         .to(".hero-p-title", { scale: 0.65, yPercent: 25, opacity: 0, filter: "blur(8px)", duration: 0.45 }, 0)
         .to(root.current, { autoAlpha: 0, duration: 0.45 }, 0.55);
     });
-    mm.add("(prefers-reduced-motion: reduce)", () => {
+    mm.add(MQ_MOTION_REDUCED, () => {
       gsap.set(".hero-pre", { opacity: 1 });
     });
     return () => mm.revert();
@@ -99,7 +100,7 @@ export default function Hero() {
           </div>
         )}
 
-        {/* УС БҮХНИЙ ЭХЛЭЛ / ДАРХАН УС СУВАГ — WebGL үед гарчиг усан доор зурагдана */}
+        {/* УС БҮХНИЙ ЭХЛЭЛ / “ДАРХАН-УС СУВАГ” ХК — WebGL үед гарчиг усан доор зурагдана */}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-4 pb-[6svh] text-center">
           <div className="hero-p-title">
             <div className="hero-title hero-pre">
@@ -108,8 +109,8 @@ export default function Hero() {
               </p>
               <h1
                 ref={title}
-                aria-label="“Дархан Ус Суваг” ХК"
-                className={`font-display text-[length:min(calc(var(--u)*6.8),15vw)] font-bold leading-[0.95] tracking-tight transition-opacity duration-700 lg:text-[length:calc(var(--u)*7.4)] ${ready ? "opacity-0" : ""}`}
+                aria-label="“Дархан-Ус Суваг” ХК"
+                className={`font-display text-[length:min(calc(var(--u)*6.8),11vw)] font-bold leading-[0.95] tracking-tight transition-opacity duration-700 lg:text-[length:calc(var(--u)*5.4)] ${ready ? "opacity-0" : ""}`}
               >
                 {lines.map((ws) => (
                   <span key={ws.join(" ")} aria-hidden className="block whitespace-nowrap lg:inline">

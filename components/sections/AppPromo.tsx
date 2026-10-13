@@ -247,9 +247,9 @@ export default function AppPromo() {
           <span className="rounded-full bg-water/15 px-2.5 py-1 text-[10px] font-semibold tracking-[0.15em] text-water">ТУН УДАХГҮЙ</span>
         </p>
         <h3 className="mt-3 text-h3">
-          Дархан Ус Суваг — <span className="text-water">гар утсанд тань</span>
+          "Дархан-Ус Суваг" ХК <span className="text-water">гар утсанд</span>
         </h3>
-        <p className="mt-3 max-w-md text-sm leading-relaxed text-mist sm:text-base">
+        <p className="mt-3 max-w-md text-justify text-sm leading-relaxed text-mist sm:text-base">
           Удахгүй манай үйлчилгээг гар утаснаасаа хэдхэн товшилтоор авах боломжтой болно.
         </p>
         <ul className="mt-4 grid gap-2 text-sm">

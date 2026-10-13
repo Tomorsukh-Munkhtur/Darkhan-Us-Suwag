@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { hasWebGL2 } from "@/components/three/journey/utils/browser";
+import { MQ_MOTION_OK, MQ_MOTION_REDUCED } from "@/lib/motion";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -105,7 +106,7 @@ export default function DropReveal({
     };
     const mm = gsap.matchMedia();
 
-    mm.add("(prefers-reduced-motion: no-preference)", () => {
+    mm.add(MQ_MOTION_OK, () => {
       // WebGL2 байхгүй бол WaterSurface үүсгэхгүй (R3F алдаа хуудсыг унагахаас сэргийлнэ)
       setSurface(hasWebGL2());
       // Жинхэнэ хугарал: backdrop-filter дотор SVG шүүлтүүр зөвхөн Chromium-д ажиллана, хүнд тул desktop дээр л
@@ -332,7 +333,7 @@ export default function DropReveal({
     });
 
     // reduced motion: шилжилтгүй, хэсгийн дээд ирмэг navbar-т хүрэхэд цайвар болно
-    mm.add("(prefers-reduced-motion: reduce)", () => {
+    mm.add(MQ_MOTION_REDUCED, () => {
       const st = ScrollTrigger.create({ trigger: el, start: "top 60px", onEnter: () => lit(true), onLeaveBack: () => lit(false) });
       return () => st.kill();
     });

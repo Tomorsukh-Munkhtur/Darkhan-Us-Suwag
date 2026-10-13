@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
+import { prefersReducedMotion } from "@/lib/motion";
 
 /** Цэг хоорондын зай (px) */
 const GAP = 40;
@@ -27,7 +28,7 @@ export default function DripDots({ items, active }: { items: { id: string; label
     if (from === to) return;
     const toFill = fills.current[to];
     gsap.killTweensOf(drop.current);
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (prefersReducedMotion()) {
       gsap.set(fills.current, { scale: 0 });
       gsap.set(toFill, { scale: 1 });
       return;

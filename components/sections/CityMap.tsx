@@ -8,6 +8,7 @@ import { cityFlow, type CityStep } from "@/lib/content";
 import CityMap3D from "@/components/three/citymap/CityMap3D";
 import { createCityRuntime } from "@/components/three/citymap/runtime";
 import DarkhanMap from "./map/DarkhanMap";
+import { prefersReducedMotion } from "@/lib/motion";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -61,7 +62,7 @@ function StepCard({ s, i, compact = false }: { s: CityStep; i: number; compact?:
         {pad(i + 1)} / {pad(N)}
       </p>
       {!compact && <h3 className="mt-1.5 text-h4 font-bold">{s.label}</h3>}
-      <p className={`mt-2 text-sm leading-relaxed text-abyss/80 ${compact ? "line-clamp-3" : ""}`}>{s.text}</p>
+      <p className={`mt-2 text-justify text-sm leading-relaxed text-abyss/80 ${compact ? "line-clamp-3" : ""}`}>{s.text}</p>
       <dl className={`grid gap-x-4 gap-y-2 ${compact ? "mt-3 grid-cols-2 text-xs" : "mt-4 grid-cols-1 text-sm"}`}>
         {s.facts.map((f) => (
           <div key={f.k} className={`flex border-t border-abyss/10 pt-2 ${compact ? "flex-col" : "justify-between gap-4"}`}>
@@ -131,7 +132,7 @@ export default function CityMap() {
 
       // pin дууссаны дараа: дараагийн хэсэг (усны долгиотой ирмэгтэй) мапын дээгүүр доороос бүрхэж гарна —
       // мап хэсгийнхээ хүрээнд удаан гүйж (доош шилжинэ), бараанна. Хүрээ (stage) overflow-hidden тул доошоо тасарна.
-      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      if (!prefersReducedMotion()) {
         gsap
           .timeline({
             scrollTrigger: { trigger: root.current, start: "bottom bottom", end: "bottom top", scrub: true, invalidateOnRefresh: true },
@@ -193,7 +194,7 @@ export default function CityMap() {
           <div className="absolute inset-x-0 top-24 z-10 px-4 text-center sm:top-28 lg:left-8 lg:right-auto lg:px-0 lg:text-left xl:left-12">
             <p className="eyebrow">Darkhan City Map</p>
             <h2 className="mt-3 text-h2">
-              ДАРХАН ХОТЫН <span className="text-water">МАП</span>
+              ДАРХАН ХОТЫН <span className="text-water">ЗУРАГЛАЛ</span>
             </h2>
           </div>
 
@@ -311,7 +312,7 @@ export default function CityMap() {
                           className="overflow-hidden"
                         >
                           <div className="pb-3 pl-12 pr-3 pt-1">
-                            <p className="text-[13px] leading-relaxed text-abyss/90">{s.text}</p>
+                            <p className="text-justify text-[13px] leading-relaxed text-abyss/90">{s.text}</p>
                             <dl className="mt-3 grid gap-y-1.5 text-xs">
                               {s.facts.map((f) => (
                                 <div key={f.k} className="flex justify-between gap-4 border-t border-abyss/10 pt-1.5">

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "framer-motion";
 import { contact, nav } from "@/lib/content";
 import { LogoMark } from "./ui/Logo";
+import { prefersReducedMotion, RESPECT_REDUCED_MOTION } from "@/lib/motion";
 
 // "Нүүр" — хоёр сонголттой нүүр хуудас (/) руу; бусад нь танилцуулгын хэсгүүд (#…)
 const items = [{ label: "Нүүр", href: "/" }, ...nav];
@@ -149,7 +150,7 @@ export default function Navbar() {
   const burger = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    const deep = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0.9 : 0.25;
+    const deep = prefersReducedMotion() ? 0.9 : 0.25;
     // scroll-spy зөвхөн хуудсан доторх хэсгүүдэд ("/" — өөр хуудас)
     const targets = items.filter((n) => n.href.startsWith("#")).map((n) => ({ href: n.href, el: document.querySelector<HTMLElement>(n.href) }));
     const lightZone = document.getElementById("light-zone");
@@ -219,7 +220,7 @@ export default function Navbar() {
   const lit = hovered ?? active;
 
   return (
-    <MotionConfig reducedMotion="user">
+    <MotionConfig reducedMotion={RESPECT_REDUCED_MOTION ? "user" : "never"}>
       <motion.header
         animate={{ y: hidden && !open ? "-140%" : "0%" }}
         transition={{ type: "spring", stiffness: 260, damping: 30 }}

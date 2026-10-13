@@ -55,7 +55,7 @@ export default function DropCursor() {
   const rings = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!window.matchMedia("(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)").matches) return;
+    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
     const L = lens.current!;
     const P = dot.current!;
     const g = group.current!;

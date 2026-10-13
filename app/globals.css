@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+/* Системийн "Animation effects" унтраалттай байсан ч эффектүүд ажиллана (lib/motion.ts → RESPECT_REDUCED_MOTION) */
+@custom-variant motion-safe {
+  @slot;
+}
+@custom-variant motion-reduce {
+  @media not all {
+    @slot;
+  }
+}
+
 /* Үндсэн (цайвар) token-ууд: abyss = хамгийн гүн (текст), foam = хөөс (дэвсгэр). */
 @theme {
   --color-abyss: #04213a;
@@ -319,10 +329,8 @@ body {
 .journey-hint__arrow {
   color: #5fd3f7;
 }
-@media (prefers-reduced-motion: no-preference) {
-  .journey-hint__arrow {
-    animation: hint-nudge 1.6s ease-in-out infinite;
-  }
+.journey-hint__arrow {
+  animation: hint-nudge 1.6s ease-in-out infinite;
 }
 @keyframes hint-nudge {
   0%,
@@ -913,15 +921,6 @@ html.drop-cursor :is(input:not([type="checkbox"], [type="radio"], [type="button"
 }
 
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-  }
-}
 
 /* Мобайл аппын утас долгионы дээгүүр хөвнө (AppPromo.tsx; motion-safe) */
 @keyframes app-float {

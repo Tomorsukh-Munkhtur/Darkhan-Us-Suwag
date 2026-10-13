@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { MQ_MOTION_REDUCED } from "@/lib/motion";
 
 /** three.js r163+ зөвхөн WebGL2 дэмждэг. Туршилтын context-ыг шууд чөлөөлнө. */
 export function hasWebGL2() {
@@ -16,7 +17,7 @@ export function hasWebGL2() {
 export function usePrefersReducedMotion() {
   const [reduced, setReduced] = useState(false);
   useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const mq = window.matchMedia(MQ_MOTION_REDUCED);
     const update = () => setReduced(mq.matches);
     update();
     mq.addEventListener("change", update);

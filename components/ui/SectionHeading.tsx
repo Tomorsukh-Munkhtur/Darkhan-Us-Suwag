@@ -17,12 +17,14 @@ export default function SectionHeading({
   still?: boolean;
 }) {
   const box = align === "center" ? "mx-auto max-w-3xl text-center" : "max-w-3xl";
+  // урт тайлбар зүүн талд байрлавал хоёр талдаа тэгшилнэ; голлуулсан үед голдоо үлдэнэ
+  const leadAlign = align === "center" ? "" : " text-justify";
   if (still)
     return (
       <div className={box}>
         <p className="eyebrow mb-5">{eyebrow}</p>
         <h2 className="text-h2">{title}</h2>
-        {lead && <p className="mt-6 text-base text-mist sm:text-lg">{lead}</p>}
+        {lead && <p className={`mt-6 text-base text-mist sm:text-lg${leadAlign}`}>{lead}</p>}
       </div>
     );
   return (
@@ -35,7 +37,7 @@ export default function SectionHeading({
     >
       <p className="eyebrow mb-5">{eyebrow}</p>
       <h2 className="text-h2">{title}</h2>
-      {lead && <p className="mt-6 text-base text-mist sm:text-lg">{lead}</p>}
+      {lead && <p className={`mt-6 text-base text-mist sm:text-lg${leadAlign}`}>{lead}</p>}
     </motion.div>
   );
 }

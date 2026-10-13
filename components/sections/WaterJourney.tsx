@@ -14,6 +14,7 @@ import { computeJourneyViews, measureJourneyBand, type JourneyBand } from "@/com
 import SectionHeading from "../ui/SectionHeading";
 import DripDots from "./journey/DripDots";
 import { REVEAL } from "./DropReveal";
+import { prefersReducedMotion, MQ_MOTION_OK } from "@/lib/motion";
 import {
   ScrubDriver,
   SourceVisual,
@@ -95,7 +96,7 @@ export default function WaterJourney() {
     const m = journeyMode();
     setMode(m);
     // WebGL2 байхгүй бол WaterSurface үүсгэхгүй (R3F алдаа хуудсыг унагахаас сэргийлнэ)
-    setSurface({ reduced: window.matchMedia("(prefers-reduced-motion: reduce)").matches, mount: m !== "LOW" && hasWebGL2() });
+    setSurface({ reduced: prefersReducedMotion(), mount: m !== "LOW" && hasWebGL2() });
     const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting));
     io.observe(root.current!);
     return () => io.disconnect();
@@ -147,7 +148,7 @@ export default function WaterJourney() {
       dist.current = last.offsetLeft + last.offsetWidth / 2 - c0;
       const len = dist.current * Math.max(1, (0.8 * window.innerHeight) / (dist.current / (N - 1)));
       travel.current = len;
-      const reveal = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : REVEAL * 100;
+      const reveal = prefersReducedMotion() ? 0 : REVEAL * 100;
       track.current!.style.height = `calc(${100 + reveal}svh + ${len}px)`;
       anchors.current.forEach((a, i) => a && (a.style.top = `${(i / (N - 1)) * len}px`));
       // хоолой: эхний картын цэгээс сүүлийн картын цэг хүртэл
@@ -228,7 +229,7 @@ export default function WaterJourney() {
 
     const mm = gsap.matchMedia();
     mm.add(
-      "(prefers-reduced-motion: no-preference)",
+      MQ_MOTION_OK,
       () => {
         // Hero-ийн ард доороос гарч ирэх үед (Hero шумбаж байхад) гарчиг усаар дамжин
         // долгиолж бүдэг харагдаад, Hero бүдгэрэхийн хэрээр тодорно.
@@ -356,7 +357,7 @@ export default function WaterJourney() {
                     </div>
                     <div className="flex flex-col justify-center p-5 sm:p-8 lg:px-10 lg:py-7">
                       <p className="font-display text-h4 font-bold text-deep">{s.title}</p>
-                      <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-abyss/75 sm:mt-3 sm:line-clamp-none sm:text-base lg:text-[1.0625rem]">
+                      <p className="mt-2 line-clamp-3 text-justify text-sm leading-relaxed text-abyss/75 sm:mt-3 sm:line-clamp-none sm:text-base lg:text-[1.0625rem]">
                         {s.lead}
                       </p>
                       <dl className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-abyss/10 bg-abyss/10 sm:mt-5 lg:mt-4">

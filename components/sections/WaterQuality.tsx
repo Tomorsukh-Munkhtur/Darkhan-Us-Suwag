@@ -7,6 +7,7 @@ import { qualityParams, qualityStats } from "@/lib/content";
 import { hasWebGL2 } from "@/components/three/journey/utils/browser";
 import SectionHeading from "../ui/SectionHeading";
 import DropReveal from "./DropReveal";
+import { prefersReducedMotion } from "@/lib/motion";
 
 const WaterSurface = dynamic(() => import("@/components/three/WaterSurface"), { ssr: false });
 
@@ -52,7 +53,7 @@ export default function WaterQuality() {
   const [flow, setFlow] = useState<{ reduced: boolean } | null>(null);
   const [inView, setInView] = useState(false);
   useEffect(() => {
-    if (hasWebGL2()) setFlow({ reduced: window.matchMedia("(prefers-reduced-motion: reduce)").matches });
+    if (hasWebGL2()) setFlow({ reduced: prefersReducedMotion() });
     const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting));
     io.observe(root.current!);
     return () => io.disconnect();
@@ -160,7 +161,7 @@ export default function WaterQuality() {
                         </div>
                       </div>
 
-                      <p className="mt-5 text-sm leading-relaxed text-abyss/85">{current.text}</p>
+                      <p className="mt-5 text-justify text-sm leading-relaxed text-abyss/85">{current.text}</p>
                       <p className="mt-5 inline-flex items-center gap-2 rounded-full bg-leaf/10 px-3.5 py-1.5 text-xs text-leaf">
                         <span className="h-2 w-2 rounded-full bg-leaf" /> Стандартын шаардлага хангасан
                       </p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { MQ_MOTION_REDUCED } from "@/lib/motion";
 
 /** Нүүр хуудасны танилцуулгын хагасын дроны бичлэг: дуугүй давталт; хөдөлгөөн багасгах тохиргоотой үед зогсоод эхний кадр (poster) үлдэнэ */
 export default function GateVideo({ src, poster, className = "" }: { src: string; poster: string; className?: string }) {
@@ -9,7 +10,7 @@ export default function GateVideo({ src, poster, className = "" }: { src: string
   useEffect(() => {
     const v = video.current;
     if (!v) return;
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const mq = window.matchMedia(MQ_MOTION_REDUCED);
     const apply = () => {
       if (mq.matches) {
         v.pause();

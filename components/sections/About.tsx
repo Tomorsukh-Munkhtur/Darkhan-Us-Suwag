@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { about } from "@/lib/content";
 import WaterEdge from "./services/WaterEdge";
+import { prefersReducedMotion } from "@/lib/motion";
 
 /**
  * Бидний тухай — дроны бичлэг бүтэн дэлгэцээр (дуугүй, давтагдана). Аяллын дусал уснаас гарах агшинд
@@ -18,7 +19,7 @@ export default function About() {
     const v = video.current!;
     // iOS автоматаар тоглуулахад muted шаардлагатай (React attribute-аар найдвартай гаргадаггүй)
     v.muted = true;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (prefersReducedMotion()) return;
     // нэг дэлгэцийн өмнөөс тоглуулж эхэлнэ — дусал нээгдэхэд аль хэдийн хөдөлж байна
     const io = new IntersectionObserver(
       ([e]) => {
@@ -62,7 +63,7 @@ export default function About() {
           <h2 className="mt-5 text-display">
             {about.title} <span className="text-aqua">{about.accent}</span>
           </h2>
-          <p className="mt-6 max-w-xl text-base leading-relaxed text-white/85 sm:text-lg">{about.text}</p>
+          <p className="mt-6 max-w-xl text-justify text-base leading-relaxed text-white/85 sm:text-lg">{about.text}</p>
         </div>
         <dl className="grid grid-cols-3 gap-4 border-t border-white/20 pt-6 sm:gap-8 lg:grid-cols-1 lg:gap-0 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0">
           {about.stats.map((s) => (

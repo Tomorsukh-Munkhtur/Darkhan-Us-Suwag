@@ -10,6 +10,7 @@ import SupplyVisual3D from "@/components/three/faucet/SupplyVisual3D";
 import SewerVisual3D from "@/components/three/sewer/SewerVisual3D";
 import TreatmentVisual3D from "@/components/three/treatment/TreatmentVisual3D";
 import { hasWebGL2 } from "@/components/three/journey/utils/browser";
+import { prefersReducedMotion, MQ_MOTION_OK } from "@/lib/motion";
 
 const WaterSurface = dynamic(() => import("@/components/three/WaterSurface"), { ssr: false });
 
@@ -69,7 +70,7 @@ export default function Services() {
   const [flow, setFlow] = useState<{ reduced: boolean } | null>(null);
   const [inView, setInView] = useState(false);
   useEffect(() => {
-    if (hasWebGL2()) setFlow({ reduced: window.matchMedia("(prefers-reduced-motion: reduce)").matches });
+    if (hasWebGL2()) setFlow({ reduced: prefersReducedMotion() });
     const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting));
     io.observe(root.current!);
     return () => io.disconnect();
@@ -98,7 +99,7 @@ export default function Services() {
   useEffect(() => {
     const mm = gsap.matchMedia();
     mm.add(
-      "(prefers-reduced-motion: no-preference)",
+      MQ_MOTION_OK,
       () => {
         gsap.utils.toArray<HTMLElement>(".svc-copy", root.current).forEach((copy) => {
           const q = gsap.utils.selector(copy);
@@ -206,7 +207,7 @@ export default function Services() {
                       {s.n} · {s.tag}
                     </p>
                     <h3 className="svc-reveal mt-3 text-h2 leading-[1.05]">{s.title}</h3>
-                    <p className="svc-reveal mt-5 text-base leading-relaxed text-abyss/75 lg:text-[1.0625rem]">{s.text}</p>
+                    <p className="svc-reveal mt-5 text-justify text-base leading-relaxed text-abyss/75 lg:text-[1.0625rem]">{s.text}</p>
                     <ul className="mt-7 space-y-3">
                       {s.points.map((p) => (
                         <li key={p} className="svc-reveal flex items-center gap-3 text-sm font-medium text-abyss/85">

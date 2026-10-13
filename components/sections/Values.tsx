@@ -105,7 +105,7 @@ export default function Values() {
                   <h3 className="mt-1 text-h4 font-bold">{p.label}</h3>
                 </div>
               </div>
-              <p className="relative mt-6 text-lg font-medium leading-relaxed text-abyss sm:text-xl lg:text-[1.4rem] lg:leading-snug">{p.text}</p>
+              <p className="relative mt-6 text-justify text-lg font-medium leading-relaxed text-abyss sm:text-xl lg:text-[1.4rem] lg:leading-snug">{p.text}</p>
             </article>
           ))}
         </div>
@@ -126,7 +126,7 @@ export default function Values() {
                   <span className="font-display text-xs text-mist">0{i + 1}</span>
                 </div>
                 <h4 className="mt-4 text-[15px] font-semibold leading-snug">{v.title}</h4>
-                <p className="mt-2 text-sm leading-relaxed text-mist">{v.text}</p>
+                <p className="mt-2 text-justify text-sm leading-relaxed text-mist">{v.text}</p>
               </li>
             ))}
           </ol>
