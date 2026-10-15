@@ -8,6 +8,7 @@ import { RENDER_PRIORITY, useRenderSlot } from "@/components/three/renderCoordin
 import { hasWebGL2 } from "@/components/three/journey/utils/browser";
 import { prefersReducedMotion, MQ_MOTION_OK, MQ_MOTION_REDUCED } from "@/lib/motion";
 import ValuesDive from "./values/ValuesDive";
+import { createHeroSnap } from "./heroSnap";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -16,10 +17,12 @@ const HeroWater = dynamic(() => import("@/components/three/HeroWater"), { ssr: f
 /** Гарчгийн мөрүүд: утсан дээр мөр бүр тусдаа, desktop дээр бүгд нэг мөрөнд */
 const lines = [["“ДАРХАН-УС"], ["СУВАГ”", "ХК"]];
 
-/** Шумбалтын scroll-ын урт (дэлгэцээр): гадаргуу → оршил → алсын хараа → эрхэм зорилго → үнэт зүйлс → аялал */
-const DIVE = 5.4;
-/** scroll (дэлгэц) → shader-ийн гүн: эхний 0.7 дэлгэцэд гадаргууг нэвтэлж гүнд орно, цаашид аажим улам гүнзгийрнэ */
-const depth = (s: number) => (s < 0.7 ? s : 0.7 + (0.25 * (s - 0.7)) / (DIVE - 0.7));
+/** Шумбалтын scroll-ын урт (дэлгэцээр): гадаргуу → усан доор алсын хараа, эрхэм зорилго, үнэт зүйлс (зэрэг) → аялал */
+const DIVE = 2.5;
+/** "нэг скролл"-ын зогсох цэгүүд (дэлгэцээр): гадаргуу → усан доорх 3 зүйл бүрэн харагдана → Hero бүдгэрч дууссан */
+const STOPS = [0, 1.2, DIVE];
+/** scroll (дэлгэц) → shader-ийн гүн: эхний хагас дэлгэцэд гадаргууг нэвтэлж гүнд орно, цаашид аажим улам гүнзгийрнэ */
+const depth = (s: number) => (s < 0.5 ? s * 1.4 : 0.7 + (0.25 * (s - 0.5)) / (DIVE - 0.5));
 
 /**
  * Давхаргууд: тунгалаг ус (WebGL) → УС БҮХНИЙ ЭХЛЭЛ → усан доорх агуулга (ValuesDive).
@@ -27,7 +30,7 @@ const depth = (s: number) => (s < 0.7 ? s : 0.7 + (0.25 * (s - 0.7)) / (DIVE - 0
  * WebGL ачаалагдах хүртэл (эсвэл дэмжихгүй бол) HTML гарчиг харагдана.
  *
  * Шумбалт: Hero (DIVE + 1) дэлгэцийн замд sticky тул DIVE дэлгэцийн турш тогтоно: ус руу шумбаж,
- * усан доор Алсын хараа → Эрхэм зорилго → Үнэт зүйлс дараалан хөвж гарна (values/ValuesDive.tsx).
+ * нэг гүйлгэхэд усан доор Алсын хараа, Эрхэм зорилго, Үнэт зүйлс зэрэгцэн хөвж гарна (values/ValuesDive.tsx).
  * WaterJourney -100svh-ээр дээш татагдсан тул сүүлийн дэлгэцэд Hero-ийн ард доороос гарч ирээд,
  * Hero бүдгэрэхэд усаар дамжин тодорно (WaterJourney.tsx). Hero цайвар (.theme-light), усан доорх хэсэг dark,
  * аяллын дусал томорч нээсэн (DropReveal.tsx) дараах хэсгүүд дахин цайвар.
@@ -69,8 +72,8 @@ export default function Hero() {
         );
 
       // Шумбалт: Hero тогтсон байх хугацаанд (timeline-ий нэгж = дэлгэц, нийт DIVE). Гүн нь dive ref-ээр shader-т очно.
-      // Бичиг жижгэрч бүдгэрэн живнэ → усан доор хэсэг бүр доороос хөвж тодорч, дээш хөвж бүдгэрнэ →
-      // сүүлийн хагас дэлгэцэд Hero бүдгэрч ард нь (мөн бараан) WaterJourney тодорно.
+      // Бичиг жижгэрч бүдгэрэн живнэ → усан доор гарчиг, гурван багана доороос дараалан хөвж гарна → уншиж байх
+      // хугацаа → дээш хөвж арилна → сүүлийн хагас дэлгэцэд Hero бүдгэрч ард нь (мөн бараан) WaterJourney тодорно.
       const tl = gsap.timeline({
         defaults: { ease: "none" },
         scrollTrigger: {
@@ -84,45 +87,29 @@ export default function Hero() {
           },
         },
       });
-      const stageIn = (sel: string, at: number) =>
-        tl.fromTo(sel, { opacity: 0, y: 70, filter: "blur(8px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.3, ease: "power2.out" }, at);
-      const stageOut = (sel: string, at: number) =>
-        tl.fromTo(
-          sel,
-          { opacity: 1, y: 0, filter: "blur(0px)" },
-          { opacity: 0, y: -70, filter: "blur(8px)", duration: 0.25, ease: "power2.in", immediateRender: false },
-          at,
-        );
-      // өгүүлбэрийн үгс [from, to] хооронд дараалан тодорно
-      const words = (sel: string, from: number, to: number) =>
-        tl.fromTo(`${sel} .vd-w`, { opacity: 0.15 }, { opacity: 1, duration: 0.12, stagger: { amount: to - from - 0.12 } }, from);
-      const bars = gsap.utils.toArray<HTMLElement>(".vd-bar");
-      const bar = (i: number, from: number, to: number) => tl.fromTo(bars[i], { scaleX: 0 }, { scaleX: 1, duration: to - from }, from);
+      tl.to(".hero-p-title", { scale: 0.65, yPercent: 25, opacity: 0, filter: "blur(8px)", duration: 0.45 }, 0);
+      tl.fromTo(".vd-backdrop", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 0.2);
+      // гарчиг, дараа нь гурван багана зүүнээс баруун тийш дараалан доороос хөвж гарна
+      tl.fromTo(".vd-head", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" }, 0.3);
+      tl.fromTo(
+        ".vd-card",
+        { opacity: 0, y: 70, filter: "blur(6px)" },
+        { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.35, ease: "power2.out", stagger: 0.07 },
+        0.38,
+      );
+      // уншиж байх хугацааны дараа дээш хөвж арилна; дараа нь Hero бүдгэрч ард нь аялал тодорно (бичвэрүүд давхцахгүй)
+      tl.fromTo(
+        ".vd-stage",
+        { opacity: 1, y: 0 },
+        { opacity: 0, y: -60, duration: 0.25, ease: "power2.in", immediateRender: false },
+        1.85,
+      );
+      tl.to(root.current, { autoAlpha: 0, duration: DIVE - 2.05 }, 2.05);
 
-      tl.to(".hero-p-title", { scale: 0.65, yPercent: 25, opacity: 0, filter: "blur(8px)", duration: 0.5 }, 0);
-      tl.fromTo(".vd-backdrop", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 0.3);
-      // оршил — гадаргууг нэвтэлж бөмбөлөг арилмагц
-      stageIn(".vd-intro", 0.45);
-      stageOut(".vd-intro", 1.15);
-      tl.fromTo(".vd-progress", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.3 }, 1.3);
-      // алсын хараа
-      stageIn(".vd-vision", 1.4);
-      words(".vd-vision", 1.45, 1.95);
-      stageOut(".vd-vision", 2.2);
-      bar(0, 1.4, 2.45);
-      // эрхэм зорилго
-      stageIn(".vd-mission", 2.45);
-      words(".vd-mission", 2.5, 3.1);
-      stageOut(".vd-mission", 3.25);
-      bar(1, 2.45, 3.5);
-      // үнэт зүйлс — гарчиг, дараа нь 4 карт дараалан
-      stageIn(".vd-values", 3.5);
-      tl.fromTo(".vd-card", { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.3, ease: "power2.out", stagger: 0.1 }, 3.6);
-      bar(2, 3.5, 4.7);
-      // усан доорх агуулга хөвж арилсны дараа Hero бүдгэрч ард нь аялал тодорно (бичвэрүүд давхцахгүй)
-      stageOut(".vd-values", 4.7);
-      tl.fromTo(".vd-progress", { opacity: 1 }, { opacity: 0, duration: 0.25, immediateRender: false }, 4.7);
-      tl.to(root.current, { autoAlpha: 0, duration: DIVE - 4.9 }, 4.9);
+      // нэг скролл = нэг алхам: гадаргуу ↔ 3 зүйл ↔ аялал (heroSnap.ts)
+      const el = track.current!;
+      // timeline-ийн нэгж (дэлгэц) → scroll px: ScrollTrigger-ийн зам (top top → bottom bottom) = track − viewport
+      return createHeroSnap(() => STOPS.map((s) => el.offsetTop + (s / DIVE) * (el.offsetHeight - window.innerHeight)));
     }, track);
     mm.add(MQ_MOTION_REDUCED, () => {
       gsap.set(".hero-pre", { opacity: 1 });

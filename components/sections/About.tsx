@@ -7,11 +7,11 @@ import SewageJourney from "./SewageJourney";
 import { prefersReducedMotion } from "@/lib/motion";
 
 /**
- * Цэвэршүүлэлт (АТА — Ариутгах татуургын алба) — дроны бичлэг бүтэн дэлгэцээр (дуугүй, давтагдана). Аяллын дусал уснаас гарах агшинд
- * (DropReveal) хамгийн түрүүнд энэ хэсэг нээгдэж, хот, гол, байгууламжийг дээрээс харуулна.
+ * Цэвэршүүлэлт (АТА — Ариутгах татуургын алба): Усны аялал дуусмагц (DropReveal) эхлээд бохир ус цэвэршүүлэх аялал
+ * (SewageJourney.tsx), дараа нь дроны бичлэг бүтэн дэлгэцээр (дуугүй, давтагдана) — "Бохир уснаас цэвэр ус хүртэл" дүгнэлт.
  * Бичлэг ойртох үед ачаалж, дэлгэцээс гарахад зогсоно; reduced motion үед зөвхөн эхний кадр (poster).
- * Доод ирмэг нь ус шиг гадаргуугаар доорх бохир ус цэвэршүүлэх аялал (SewageJourney.tsx) руу шилжинэ.
- * #about нь хоёуланг нь хамарна (navbar-ын scroll-spy).
+ * Бичлэгийн дээд ирмэгт аяллын цайвар усны гадаргуу доош долгиолно; доод ирмэг нь тайван усны гадаргуугаар
+ * дараагийн (Ухаалаг үйлчилгээ) хэсэгт шилжинэ. #about нь хоёуланг нь хамарна (navbar-ын scroll-spy).
  */
 export default function About() {
   const root = useRef<HTMLElement>(null);
@@ -36,6 +36,7 @@ export default function About() {
 
   return (
     <div id="about">
+      <SewageJourney />
       <section ref={root} className="relative h-[100svh] min-h-[560px] overflow-hidden bg-[#0b3350] text-white">
         <video
           ref={video}
@@ -79,15 +80,19 @@ export default function About() {
           </dl>
         </div>
 
-        {/* доод ирмэг: тайван ус шиг гадаргуу → Цэвэршүүлэх үйл явц.
-            Доод 4px-ийг дараагийн хэсгийн өнгөөр бүрхэнэ — 125% г.м. масштабтай дэлгэцэнд бутархай пикселийн
+        {/* дээд ирмэг: өмнөх (бохир усны аяллын) цайвар усны гадаргуу бичлэг рүү доош долгиолно (WaterEdge-ийг эргүүлсэн).
+            Ирмэгийн 4px-ийг өмнөх/дараагийн хэсгийн өнгөөр бүрхэнэ — 125% г.м. масштабтай дэлгэцэнд бутархай пикселийн
             ирмэгт бараан бичлэг саарал шугам болж харагдахгүй */}
+        <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-[#eef6fb]" />
+        <div aria-hidden className="absolute inset-x-0 top-0 h-0 -scale-y-100" style={{ "--svc-top": "#eef6fb" } as React.CSSProperties}>
+          <WaterEdge variant="calm" />
+        </div>
+        {/* доод ирмэг: тайван ус шиг гадаргуу → Ухаалаг үйлчилгээ (SmartServices.tsx, дээд өнгө #eef6fb) */}
         <div aria-hidden className="absolute inset-x-0 bottom-0 h-1 bg-[#eef6fb]" />
         <div aria-hidden className="absolute inset-x-0 bottom-0 h-0" style={{ "--svc-top": "#eef6fb" } as React.CSSProperties}>
           <WaterEdge variant="calm" />
         </div>
       </section>
-      <SewageJourney />
     </div>
   );
 }

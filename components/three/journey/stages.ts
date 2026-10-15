@@ -1,5 +1,5 @@
 import { journey } from "@/lib/content";
-import { HOMES_ANCHOR, TANK, tankZoneX } from "./scenes/treatmentLayout";
+import { TANK, tankZoneX } from "./scenes/treatmentLayout";
 
 export type Vec3 = readonly [number, number, number];
 
@@ -21,7 +21,7 @@ export type StageDef = {
 export const STAGES: StageDef[] = [
   { id: "source", floorY: -1.28, camera: { azimuth: 20, elevation: 21, bounds: [-2.2, -1.18, -1.4, 2.2, 1.25, 1.4] } },
   { id: "extraction", floorY: -1.28, camera: { azimuth: 24, elevation: 16, bounds: [-1.8, -1.18, -1.1, 2.1, 0.85, 1.4] } },
-  { id: "treatment", floorY: -0.62, camera: { azimuth: 12, elevation: 25, bounds: [-2.5, -0.52, -1.3, 2.5, 1.52, 1.3] } },
+  { id: "treatment", floorY: -0.62, camera: { azimuth: 12, elevation: 25, bounds: [-2.3, -0.52, -1.0, 2.3, 1.52, 1.0] } },
   { id: "reservoir", floorY: -0.62, camera: { azimuth: 24, elevation: 20, bounds: [-1.6, -0.52, -1.3, 1.6, 2.0, 1.3] } },
   { id: "network", floorY: -0.62, camera: { azimuth: 28, elevation: 44, bounds: [-2.2, -0.52, -1.7, 2.2, 1.3, 1.7] } },
   { id: "home", floorY: -0.62, camera: { azimuth: -24, elevation: 20, bounds: [-1.9, -0.52, -1.4, 1.9, 1.7, 1.4] } },
@@ -71,7 +71,6 @@ export const LABELS: StageLabel[] = [
       variant: "step",
     }),
   ),
-  { id: "treatment-homes", stage: 2, anchor: HOMES_ANCHOR, text: "Айл өрх", minor: true },
 
   { id: "network-source", stage: 4, anchor: [-1.95, 0.62, -1.05], text: "Эх үүсвэр" },
   { id: "network-city", stage: 4, anchor: [1.1, 1.25, -0.95], text: "Дархан хот", minor: true },

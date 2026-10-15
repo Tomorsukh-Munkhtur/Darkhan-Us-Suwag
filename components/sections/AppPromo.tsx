@@ -159,8 +159,8 @@ function AppScreen() {
   );
 }
 
-/** Хазгай утас: тунгалаг дэлгэцийн ард аппын дэлгэцийг перспективээр тааруулж зурна, утасны хүрээ дээр нь (SmartServices ч ашиглана) */
-export function AppPhone({ className = "", content }: { className?: string; /** аппын дэлгэц (анхдагч — AppScreen) */ content?: React.ReactNode }) {
+/** Хазгай утас: тунгалаг дэлгэцийн ард аппын дэлгэцийг перспективээр тааруулж зурна, утасны хүрээ дээр нь */
+export function AppPhone({ className = "" }: { className?: string }) {
   const box = useRef<HTMLDivElement>(null);
   const screen = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -188,7 +188,7 @@ export function AppPhone({ className = "", content }: { className?: string; /** 
         className="invisible absolute left-0 top-0 origin-top-left overflow-hidden rounded-[58px]"
         style={{ width: SW, height: SH }}
       >
-        {content ?? <AppScreen />}
+        <AppScreen />
       </div>
       <Image
         src="/images/app-phone.png"

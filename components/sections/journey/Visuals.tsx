@@ -173,7 +173,7 @@ export function ExtractionVisual() {
   );
 }
 
-/* 2.3 — Цэвэршүүлэлт: цэвэр усыг дахин шүүж улам тунгалаг болгоод, шугамаар айл өрхөд (орон сууц, гэр) түгээнэ */
+/* 2.3 — Цэвэршүүлэлт: цэвэр усыг дахин шүүж улам тунгалаг болгоод, гарах шугамаар цааш урсгана */
 export function TreatmentVisual() {
   const rand = seeded(7);
   const sparks = Array.from({ length: 26 }, () => ({
@@ -181,20 +181,13 @@ export function TreatmentVisual() {
     y: 78 + rand() * 180,
     r: 1 + rand() * 2,
   }));
-  const steps = ["Ундны ус", "Дахин шүүх", "Цэвэршүүлэх", "Халдваргүйжүүлэх", "Айл өрхөд"];
-  // орон сууц: x, өндөр, давхар
-  const blocks = [
-    { x: 244, h: 46, rows: 4 },
-    { x: 282, h: 64, rows: 6 },
-    { x: 320, h: 40, rows: 3 },
-  ];
+  const steps = ["Ундны ус", "Дахин шүүх", "Цэвэршүүлэх", "Халдваргүйжүүлэх", "Стандарт"];
   const ref = useScrub<SVGSVGElement>((tl, q) => {
     tl.fromTo(q(".clean"), { attr: { fill: "#1f6fa3" } }, { attr: { fill: W }, ease: "none" }, 0)
       .fromTo(q(".spark"), { opacity: 0 }, { opacity: 0.9, stagger: { each: 0.012, from: "random" } }, 0)
       .fromTo(q(".step"), { opacity: 0.2 }, { opacity: 1, stagger: 0.14 }, 0)
       .fromTo(q(".step-dot"), { attr: { fill: LINE } }, { attr: { fill: W }, stagger: 0.14 }, 0)
-      .fromTo(q(".pipe"), { strokeDashoffset: 1 }, { strokeDashoffset: 0, ease: "none", duration: 0.3 }, 0.55)
-      .fromTo(q(".win"), { attr: { fill: "#10263b" } }, { attr: { fill: "#ffc94d" }, stagger: { each: 0.008, from: "random" }, duration: 0.2 }, 0.8);
+      .fromTo(q(".pipe"), { strokeDashoffset: 1 }, { strokeDashoffset: 0, ease: "none", duration: 0.3 }, 0.7);
   });
   return (
     <svg ref={ref} viewBox="0 0 400 400" className="h-full w-full">
@@ -213,26 +206,11 @@ export function TreatmentVisual() {
           </text>
         </g>
       ))}
-      {/* гарах шугам → гудамж → айл өрх */}
-      <path d="M200 250 H222 V336 H392" stroke={LINE} strokeWidth="5" fill="none" strokeLinecap="round" />
-      <path className="pipe" d="M200 250 H222 V336 H392" pathLength={1} strokeDasharray="1" stroke={W} strokeWidth="3" fill="none" strokeLinecap="round" />
-      {blocks.map((b) => (
-        <g key={b.x}>
-          <rect x={b.x} y={330 - b.h} width="28" height={b.h} fill="#1b4a70" stroke={LINE} />
-          {Array.from({ length: b.rows * 2 }, (_, k) => (
-            <rect key={k} className="win" x={b.x + 5 + (k % 2) * 11} y={330 - b.h + 6 + Math.floor(k / 2) * 9} width="7" height="5" fill="#10263b" />
-          ))}
-        </g>
-      ))}
-      {/* гэр */}
-      {[362, 386].map((x) => (
-        <g key={x}>
-          <path d={`M${x - 10} 330 V322 L${x} 314 L${x + 10} 322 V330 Z`} fill="#cfdde7" stroke={LINE} />
-          <rect className="win" x={x - 2} y="323" width="4" height="7" fill="#10263b" />
-        </g>
-      ))}
+      {/* гарах шугам (цааш усан сан руу) */}
+      <path d="M200 250 H222 V300 H392" stroke={LINE} strokeWidth="5" fill="none" strokeLinecap="round" />
+      <path className="pipe" d="M200 250 H222 V300 H392" pathLength={1} strokeDasharray="1" stroke={W} strokeWidth="3" fill="none" strokeLinecap="round" />
       <text x="50" y="380" fill={W} fontSize="10" letterSpacing="3">
-        CLEAN → FILTER → HOMES
+        CLEAN → FILTER → STANDARD
       </text>
     </svg>
   );

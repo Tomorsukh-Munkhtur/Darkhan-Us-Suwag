@@ -46,6 +46,8 @@ export default function JourneyStage3D({
 }: Props) {
   const [supported, setSupported] = useState<boolean | null>(null);
   const [inView, setInView] = useState(false);
+  // харагдаж буй хувь (0–1): хуудсанд хоёр аялал зэрэгцэн байхад илүү харагдаж буй нь зурна
+  const [ratio, setRatio] = useState(0);
   const [armed, setArmed] = useState(false);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -61,14 +63,21 @@ export default function JourneyStage3D({
       },
       { rootMargin: "300px 0px" },
     );
+    const vis = new IntersectionObserver(([e]) => setRatio(e.isIntersecting ? Math.round(e.intersectionRatio * 10) / 10 : 0), {
+      threshold: Array.from({ length: 11 }, (_, i) => i / 10),
+    });
     io.observe(box.current!);
-    return () => io.disconnect();
+    vis.observe(box.current!);
+    return () => {
+      io.disconnect();
+      vis.disconnect();
+    };
   }, []);
 
   const on = tier !== null && tier !== "off";
   const settings = on ? TIERS[tier] : null;
   const use3D = on && supported === true && armed && !failed;
-  const allowed = useRenderSlot(slotId, RENDER_PRIORITY.journey3d, use3D && inView);
+  const allowed = useRenderSlot(slotId, RENDER_PRIORITY.journey3d + ratio * 0.3, use3D && inView);
   const continuous = !!settings?.ambient && !reduced;
   const live = use3D && ready;
 
