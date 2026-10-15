@@ -156,6 +156,8 @@ export default function Navbar() {
     const lightZone = document.getElementById("light-zone");
     // цайвар хэсгүүдийн дундах dark хэсэг (Усны чанар) — navbar дор нь байвал бараан
     const darkZones = [...document.querySelectorAll<HTMLElement>("[data-nav-dark]")];
+    // Hero-ийн шумбалтын зам (усан доорх агуулгатай) — дуустал navbar нуугдахгүй
+    const heroTrack = document.getElementById("top")?.parentElement;
     let lastY = window.scrollY;
     let raf = 0;
     const update = () => {
@@ -171,7 +173,7 @@ export default function Navbar() {
       });
       setSurface(!overDark && (y < vh * deep || lightZone?.dataset.navLight === "true"));
       if (Math.abs(y - lastY) > 6) {
-        setHidden(y > lastY && y > vh * 2.2);
+        setHidden(y > lastY && y > (heroTrack ? heroTrack.offsetTop + heroTrack.offsetHeight : vh) + vh * 0.2);
         lastY = y;
       }
       // лого тойрох цагираг: хуудсыг хэр гүйлгэсэн

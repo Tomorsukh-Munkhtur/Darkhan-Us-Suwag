@@ -83,7 +83,7 @@ function AppScreen() {
         <LogoMark size={46} className="h-[46px] w-[46px]" />
         <div className="leading-tight">
           <p className="text-[13px] text-[#56758d]">Сайн байна уу</p>
-          <p className="text-[18px] font-bold">Дархан Ус Суваг</p>
+          <p className="text-[18px] font-bold">{app.name}</p>
         </div>
         <span className="ml-auto grid h-11 w-11 place-items-center rounded-full bg-white text-[#0078be] shadow-sm">
           {ico(<><path d="M6 16V11a6 6 0 0112 0v5l2 2H4z" /><path d="M10 20a2 2 0 004 0" /></>, 20)}
@@ -159,8 +159,8 @@ function AppScreen() {
   );
 }
 
-/** Хазгай утас: тунгалаг дэлгэцийн ард аппын дэлгэцийг перспективээр тааруулж зурна, утасны хүрээ дээр нь */
-function AppPhone({ className = "" }: { className?: string }) {
+/** Хазгай утас: тунгалаг дэлгэцийн ард аппын дэлгэцийг перспективээр тааруулж зурна, утасны хүрээ дээр нь (SmartServices ч ашиглана) */
+export function AppPhone({ className = "", content }: { className?: string; /** аппын дэлгэц (анхдагч — AppScreen) */ content?: React.ReactNode }) {
   const box = useRef<HTMLDivElement>(null);
   const screen = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -188,11 +188,11 @@ function AppPhone({ className = "" }: { className?: string }) {
         className="invisible absolute left-0 top-0 origin-top-left overflow-hidden rounded-[58px]"
         style={{ width: SW, height: SH }}
       >
-        <AppScreen />
+        {content ?? <AppScreen />}
       </div>
       <Image
         src="/images/app-phone.png"
-        alt="Дархан Ус Суваг мобайл апп"
+        alt={`${app.name} мобайл апп`}
         width={1000}
         height={1667}
         sizes="(min-width: 1024px) 280px, 220px"
@@ -202,15 +202,15 @@ function AppPhone({ className = "" }: { className?: string }) {
   );
 }
 
-const apple = (
+export const apple = (
   <path
     fill="currentColor"
     d="M16.4 12.6c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.4 1.2 9.8.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8s1.9.8 3.2.8c1.3 0 2.1-1.2 2.9-2.4.9-1.4 1.3-2.7 1.3-2.8 0 0-2.4-1-2.4-3.9zM14 5.4c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1.1.1 2.1-.6 2.8-1.4z"
   />
 );
-const play = <path fill="currentColor" d="M4.6 2.3c-.3.3-.4.7-.4 1.2v17c0 .5.1.9.4 1.2L14 12 4.6 2.3zm10.8 11.1l2.8 2.8-11.1 6.3 8.3-9.1zm0-2.8L7.1 1.5l11.1 6.3-2.8 2.8zm4.1 1.4l-2.6 1.5-3-3 3-3 2.6 1.5c.8.5.8 1.5 0 2z" />;
+export const play = <path fill="currentColor" d="M4.6 2.3c-.3.3-.4.7-.4 1.2v17c0 .5.1.9.4 1.2L14 12 4.6 2.3zm10.8 11.1l2.8 2.8-11.1 6.3 8.3-9.1zm0-2.8L7.1 1.5l11.1 6.3-2.8 2.8zm4.1 1.4l-2.6 1.5-3-3 3-3 2.6 1.5c.8.5.8 1.5 0 2z" />;
 
-function StoreButton({ href, label, icon }: { href: string | null; label: string; icon: React.ReactNode }) {
+export function StoreButton({ href, label, icon }: { href: string | null; label: string; icon: React.ReactNode }) {
   const inner = (
     <>
       <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
@@ -235,22 +235,23 @@ function StoreButton({ href, label, icon }: { href: string | null; label: string
 }
 
 /**
- * Footer дээрх мобайл аппын танилцуулга: зүүн талд текст, баруун талд хазгай утас (долгионы дээгүүр хөвсөн мэт).
- * Апп гараагүй үед дэлгүүрийн товчнууд "Тун удахгүй" (lib/content.ts → app).
+ * Footer дээрх BILL center аппын танилцуулга: зүүн талд текст, баруун талд хазгай утас (долгионы дээгүүр хөвсөн мэт).
+ * Дэлгүүрийн холбоосгүй үед товчнууд, тэмдэг нь "Тун удахгүй" (lib/content.ts → app).
  */
 export default function AppPromo() {
+  const soon = !app.ios && !app.android;
   return (
     <div className="mx-auto grid max-w-7xl items-center gap-6 px-4 sm:px-8 md:grid-cols-[minmax(0,1fr)_auto] md:gap-12">
       <div className="order-2 md:order-1">
         <p className="flex items-center gap-3">
           <span className="eyebrow">Мобайл апп</span>
-          <span className="rounded-full bg-water/15 px-2.5 py-1 text-[10px] font-semibold tracking-[0.15em] text-water">ТУН УДАХГҮЙ</span>
+          {soon && <span className="rounded-full bg-water/15 px-2.5 py-1 text-[10px] font-semibold tracking-[0.15em] text-water">ТУН УДАХГҮЙ</span>}
         </p>
         <h3 className="mt-3 text-h3">
-          "Дархан-Ус Суваг" ХК <span className="text-water">гар утсанд</span>
+          {app.name} — <span className="text-water">гар утсанд</span>
         </h3>
         <p className="mt-3 max-w-md text-justify text-sm leading-relaxed text-mist sm:text-base">
-          Удахгүй манай үйлчилгээг гар утаснаасаа хэдхэн товшилтоор авах боломжтой болно.
+          {app.lead}
         </p>
         <ul className="mt-4 grid gap-2 text-sm">
           {app.features.map((f) => (

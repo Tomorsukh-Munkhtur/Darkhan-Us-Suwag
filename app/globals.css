@@ -291,6 +291,16 @@ body {
   background: linear-gradient(90deg, #1f8fd0, #5fd3f7);
   box-shadow: 0 0 12px rgb(56 182 240 / 0.6);
 }
+/* Бохир усны аялал (SewageJourney.tsx): баруунаас зүүн тийш — бохир (хүрэн, баруун) → цэвэр (цэнхэр, зүүн);
+   градиент байрандаа, clip-path-аар баруун ирмэгээс дүүрнэ, доторх урсгал зүүн тийш */
+.journey-pipe__fill--sewage {
+  clip-path: inset(0 0 0 100%);
+  background: linear-gradient(270deg, #8a6a3a, #7a6a45 30%, #5e7d6e 55%, #1f8fd0 85%, #5fd3f7);
+  box-shadow: 0 0 10px rgb(94 125 110 / 0.45);
+}
+.journey-pipe__fill--sewage::after {
+  animation-direction: reverse;
+}
 /* хоолой доторх урсгал */
 .journey-pipe__fill::after {
   content: "";

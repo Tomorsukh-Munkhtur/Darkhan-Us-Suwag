@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { STAGES, type CameraPreset } from "./stages";
+import type { CameraPreset } from "./stages";
 
 const { degToRad } = THREE.MathUtils;
 /** Фрэймийн ирмэгээс үлдээх зай (1 = яг ирмэгт) */
@@ -36,7 +36,8 @@ export function fitDistance(preset: CameraPreset, fovDeg: number, aspect: number
   return { distance: d, center };
 }
 
-const fits = new Map<string, { distance: number; center: THREE.Vector3 }>();
+// preset бүрийн (aspect, fov)-оор тооцсон зай — олон аялал (canvas) зэрэг байж болно
+const fits = new WeakMap<CameraPreset, Map<string, { distance: number; center: THREE.Vector3 }>>();
 const dir = new THREE.Vector3();
 
 /**
@@ -45,14 +46,15 @@ const dir = new THREE.Vector3();
  * Damping, цаг ашиглахгүй — progress-ийг буцаахад камер яг урвуу явна. Roll, FOV өөрчлөлт үгүй.
  * extraAz/extraEl — зөвхөн ambient үеийн чимэглэл (±1–3°), bounds-ийн MARGIN дотор багтана.
  */
-export function poseCamera(cam: THREE.PerspectiveCamera, stage: number, p: number, aspect: number, extraAz = 0, extraEl = 0) {
-  const preset = STAGES[stage].camera;
-  const key = `${stage}:${aspect.toFixed(3)}:${cam.fov}`;
-  let f = fits.get(key);
+export function poseCamera(cam: THREE.PerspectiveCamera, preset: CameraPreset, p: number, aspect: number, extraAz = 0, extraEl = 0) {
+  let cache = fits.get(preset);
+  if (!cache) fits.set(preset, (cache = new Map()));
+  const key = `${aspect.toFixed(3)}:${cam.fov}`;
+  let f = cache.get(key);
   if (!f) {
     f = fitDistance(preset, cam.fov, aspect);
-    if (fits.size > 64) fits.delete(fits.keys().next().value!);
-    fits.set(key, f);
+    if (cache.size > 64) cache.delete(cache.keys().next().value!);
+    cache.set(key, f);
   }
   if (cam.aspect !== aspect) {
     cam.aspect = aspect;

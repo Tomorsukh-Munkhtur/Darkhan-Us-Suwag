@@ -62,8 +62,8 @@ export default function WaterQuality() {
   return (
     <>
       {/* шилжилтийн үед хэсэг дэлгэцийн дээд ирмэгт зөөгдөх тул анхны байрлал нь хоосорно —
-          тэнд Бидний үйл ажиллагааны доод өнгө (#d9ecf8) үргэлжилнэ (цагаан зурвас гарахгүй) */}
-      <div className="bg-[#d9ecf8]">
+          тэнд Ухаалаг үйлчилгээний (SmartServices) бараан дэвсгэр (#05182b) үргэлжилнэ (өөр өнгийн зурвас гарахгүй) */}
+      <div className="bg-[#05182b]">
         <DropReveal
           id="quality-zone"
           className="theme-dark relative bg-foam text-abyss"

@@ -29,13 +29,15 @@ export const C = {
   aquiferBase: "#0f4670",
   plate: "#15395a",
   foundation: "#0c2740",
-  // цэвэршүүлэлт
-  murk: "#6d5a36",
-  dirt: "#a68a55",
-  sand: "#8c7b52",
-  gravel: "#5e5646",
-  carbon: "#1d2733",
+  // цэвэршүүлэлт (стандарт хангасан — ногоон гэрэл)
   green: "#34c28a",
+  // бохир ус (Ариутгах татуурга — three/sewage): хүрэн урсгал, лаг, хог
+  sewage: "#6e5230",
+  sewageGlow: "#e3c48e",
+  sludge: "#4a3920",
+  debris: "#3b3328",
+  tree: "#1f6b55",
+  concrete: "#5d7487",
   // барилга, гэр
   wall: "#1d4c72",
   roof: "#123a5c",

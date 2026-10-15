@@ -1,5 +1,25 @@
 import type * as THREE from "three";
 import { TIERS, type QualityTier } from "./quality";
+import { WATER_JOURNEY, type StageDef, type StageLabel } from "./stages";
+
+/**
+ * Нэг аяллын 3D тохиргоо: үе шат бүрийн камер, тавцан, DOM шошго (Усны аялал — stages.ts, Бохир ус — sewage/stages.ts).
+ * mirror — диорамуудыг x тэнхлэгээр толин тусгална (урсгал баруунаас зүүн тийш — зүүн тийш явдаг аялалд).
+ */
+export type JourneyConfig = { stages: StageDef[]; labels: StageLabel[]; mirror?: boolean };
+
+/** Толин тусгал: камерын азимут, хүрээ (bounds), шошгын цэгийн x-ийг эсрэгээр — зураг нь анхныхаа яг толин дүр */
+function mirrored({ stages, labels, mirror }: JourneyConfig): JourneyConfig {
+  if (!mirror) return { stages, labels };
+  return {
+    stages: stages.map((s) => {
+      const [x0, y0, z0, x1, y1, z1] = s.camera.bounds;
+      return { ...s, camera: { ...s.camera, azimuth: -s.camera.azimuth, bounds: [-x1, y0, z0, -x0, y1, z1] } };
+    }),
+    labels: labels.map((l) => ({ ...l, anchor: [-l.anchor[0], l.anchor[1], l.anchor[2]] })),
+    mirror,
+  };
+}
 
 /**
  * Нэг canvas доторх нэг "цонх" (view): тухайн картын зургийн хэсэгт тухайн үе шатыг өөрийн progress-оор зурна.
@@ -29,6 +49,12 @@ export type JourneyView = {
  */
 export type JourneyRuntime = {
   views: JourneyView[];
+  /** Үе шат бүрийн камер, тавцангийн өндөр */
+  stages: StageDef[];
+  /** DOM шошго (JourneyLabels) */
+  labels: StageLabel[];
+  /** Диорамууд x тэнхлэгээр толин тусгалтай (JourneyCanvas) */
+  mirror: boolean;
   /** Хост зөвшөөрсөн эсэх (хэрэглэгчийн "хөдөлгөөн зогсоох"). Түвшин, reduced-тэй хамт → ambientOn() */
   ambient: boolean;
   ambientTime: number;
@@ -58,10 +84,17 @@ export type JourneyDriver = {
 const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
 const NO_CORNERS = [false, false, false, false] as const;
 
-/** stage өгвөл нэг бүтэн-canvas view-тэй (лаб); өгөхгүй бол view-гүй — хост setViews() дуудна (production) */
-export function createJourneyDriver(stage?: number, progress = 1): JourneyDriver {
+/**
+ * stage өгвөл нэг бүтэн-canvas view-тэй (лаб); өгөхгүй бол view-гүй — хост setViews() дуудна (production).
+ * config — аль аяллын үе шатууд (анхдагч нь Усны аялал).
+ */
+export function createJourneyDriver(stage?: number, progress = 1, config: JourneyConfig = WATER_JOURNEY): JourneyDriver {
+  const cfg = mirrored(config);
   const rt: JourneyRuntime = {
     views: [],
+    stages: cfg.stages,
+    labels: cfg.labels,
+    mirror: !!cfg.mirror,
     ambient: false,
     ambientTime: 0,
     reduced: false,

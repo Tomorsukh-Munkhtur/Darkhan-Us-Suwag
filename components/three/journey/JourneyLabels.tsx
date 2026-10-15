@@ -2,7 +2,7 @@
 
 import * as THREE from "three";
 import type { JourneyRuntime, JourneyView } from "./runtime";
-import { LABELS, type StageLabel } from "./stages";
+import type { StageLabel } from "./stages";
 import { seg } from "./utils/ease";
 
 /**
@@ -10,11 +10,12 @@ import { seg } from "./utils/ease";
  * Байрлал, хэмжээний ангиллыг projectLabels кадр бүр бичнэ — React re-render хийхгүй.
  * Хэмжээ нь тухайн view-ийн өргөнөөс (data-size: sm < 360px ≤ md < 520px ≤ lg), canvas-ийнхаас биш.
  * Картын текст контент хэвээр тул шошго нь aria-hidden (давхардуулахгүй).
+ * 3D дэвсгэр үргэлж бараан тул шошго нь цайвар хэсэгт (Бохир усны аялал) ч .theme-dark өнгөтэй.
  */
 export function JourneyLabelLayer({ rt }: { rt: JourneyRuntime }) {
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      {LABELS.map((l) => (
+    <div aria-hidden className="theme-dark pointer-events-none absolute inset-0 overflow-hidden">
+      {rt.labels.map((l) => (
         <div
           key={l.id}
           ref={(el) => {
@@ -95,7 +96,7 @@ export function projectLabels(
 ) {
   const fade = seg(view.opacity, 0.6, 0.95);
   const size = sizeClass(rect.w);
-  for (const l of LABELS) {
+  for (const l of rt.labels) {
     if (l.stage !== view.stage) continue;
     const el = rt.labelEls.get(l.id);
     if (!el) continue;
@@ -112,7 +113,7 @@ export function projectLabels(
     v.set(l.anchor[0], l.anchor[1], l.anchor[2]).project(cam);
     let x = rect.x + ((v.x + 1) / 2) * rect.w;
     let y = rect.y + ((1 - v.y) / 2) * rect.h;
-    // Тоон шошго (86%) заагчгүй тул view дотор шахна (жижиг утасны зурваст ч харагдана)
+    // Тоон шошго (metric) заагчгүй тул view дотор шахна (жижиг утасны зурваст ч харагдана)
     if (l.variant === "metric") {
       if (m.w + 4 > clip.x1 - clip.x0 || m.h + 4 > clip.y1 - clip.y0) continue;
       x = Math.min(Math.max(x, clip.x0 + m.w / 2 + 2), clip.x1 - m.w / 2 - 2);

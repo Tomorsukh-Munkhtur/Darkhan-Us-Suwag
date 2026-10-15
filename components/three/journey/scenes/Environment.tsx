@@ -5,7 +5,6 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { JourneyRuntime } from "../runtime";
 import { TIERS } from "../quality";
-import { STAGES } from "../stages";
 import { createBackdropMaterial, createFloorMaterial } from "../materials/fx";
 import { useDisposable } from "../utils/useDisposable";
 
@@ -47,7 +46,7 @@ export function StageFloor({ rt }: { rt: JourneyRuntime }) {
     mat.uniforms.uLines.value = TIERS[rt.tier].fx ? 1 : 0;
   });
   return (
-    <mesh ref={ref} rotation-x={-Math.PI / 2} position-y={STAGES[0].floorY} material={mat} renderOrder={-1}>
+    <mesh ref={ref} rotation-x={-Math.PI / 2} position-y={rt.stages[0].floorY} material={mat} renderOrder={-1}>
       <circleGeometry args={[4.8, 96]} />
     </mesh>
   );

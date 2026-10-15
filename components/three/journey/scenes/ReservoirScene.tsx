@@ -5,7 +5,6 @@ import * as THREE from "three";
 import { C } from "../materials/palette";
 import { createFlowMaterial, densityFor } from "../materials/flow";
 import { createWaterSurfaceMaterial } from "../materials/water";
-import { setLabelText } from "../runtime";
 import { easeInOutCubic, easeOutBack, ramp, seg } from "../utils/ease";
 import { pipePath } from "../utils/geometry";
 import { useDisposable } from "../utils/useDisposable";
@@ -83,7 +82,7 @@ function ReservoirScene({ rt, index }: SceneProps) {
       m.instanceMatrix.needsUpdate = true;
     }
 
-    // түвшин: SVG-тэй адил 12% → 86% (зөвхөн progress-оос). Ambient үед гадаргуу бага зэрэг хэлбэлзэнэ, тоо өөрчлөгдөхгүй.
+    // түвшин: 12% → 86% (зөвхөн progress-оос; тоон шошгогүй). Ambient үед гадаргуу бага зэрэг хэлбэлзэнэ, тоо өөрчлөгдөхгүй.
     const fill = easeInOutCubic(seg(r, 0.35, 1));
     const level = FROM + (TO - FROM) * fill;
     const h = Math.max((level + Math.sin(amb * 0.9) * 0.003 * fill) * TANK_H, 0.001);
@@ -94,7 +93,6 @@ function ReservoirScene({ rt, index }: SceneProps) {
     top.current!.visible = show > 0.01;
     marker.current!.position.y = BASE + h * show;
     pointer.current!.position.y = BASE + h * show;
-    setLabelText(rt, "reservoir-level", `${Math.round(level * 100)}%`);
 
     surface.uniforms.uPhase.value = phase(r, amb, 3);
     surface.uniforms.uDetail.value = tier.waterDetail;

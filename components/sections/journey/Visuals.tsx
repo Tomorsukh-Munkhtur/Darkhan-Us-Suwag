@@ -173,40 +173,66 @@ export function ExtractionVisual() {
   );
 }
 
-/* 2.3 — Цэвэршүүлэлт: бохирдуулагч багасаж, ус тунгалаг болно */
+/* 2.3 — Цэвэршүүлэлт: цэвэр усыг дахин шүүж улам тунгалаг болгоод, шугамаар айл өрхөд (орон сууц, гэр) түгээнэ */
 export function TreatmentVisual() {
   const rand = seeded(7);
-  const dots = Array.from({ length: 46 }, () => ({
-    x: 70 + rand() * 150,
-    y: 70 + rand() * 270,
-    r: 1.5 + rand() * 3.5,
+  const sparks = Array.from({ length: 26 }, () => ({
+    x: 62 + rand() * 126,
+    y: 78 + rand() * 180,
+    r: 1 + rand() * 2,
   }));
-  const steps = ["Түүхий ус", "Шүүх", "Цэвэршүүлэх", "Халдваргүйжүүлэх", "Бэлэн ус"];
+  const steps = ["Ундны ус", "Дахин шүүх", "Цэвэршүүлэх", "Халдваргүйжүүлэх", "Айл өрхөд"];
+  // орон сууц: x, өндөр, давхар
+  const blocks = [
+    { x: 244, h: 46, rows: 4 },
+    { x: 282, h: 64, rows: 6 },
+    { x: 320, h: 40, rows: 3 },
+  ];
   const ref = useScrub<SVGSVGElement>((tl, q) => {
-    tl.fromTo(q(".murk"), { attr: { fill: "#6d5a36" } }, { attr: { fill: W }, ease: "none" }, 0)
-      .to(q(".dirt"), { opacity: 0, scale: 0, transformOrigin: "50% 50%", stagger: { each: 0.01, from: "random" } }, 0)
-      .fromTo(q(".step"), { opacity: 0.2 }, { opacity: 1, stagger: 0.18 }, 0)
-      .fromTo(q(".step-dot"), { attr: { fill: LINE } }, { attr: { fill: W }, stagger: 0.18 }, 0);
+    tl.fromTo(q(".clean"), { attr: { fill: "#1f6fa3" } }, { attr: { fill: W }, ease: "none" }, 0)
+      .fromTo(q(".spark"), { opacity: 0 }, { opacity: 0.9, stagger: { each: 0.012, from: "random" } }, 0)
+      .fromTo(q(".step"), { opacity: 0.2 }, { opacity: 1, stagger: 0.14 }, 0)
+      .fromTo(q(".step-dot"), { attr: { fill: LINE } }, { attr: { fill: W }, stagger: 0.14 }, 0)
+      .fromTo(q(".pipe"), { strokeDashoffset: 1 }, { strokeDashoffset: 0, ease: "none", duration: 0.3 }, 0.55)
+      .fromTo(q(".win"), { attr: { fill: "#10263b" } }, { attr: { fill: "#ffc94d" }, stagger: { each: 0.008, from: "random" }, duration: 0.2 }, 0.8);
   });
   return (
     <svg ref={ref} viewBox="0 0 400 400" className="h-full w-full">
-      <rect x="60" y="50" width="170" height="300" rx="22" fill={SURFACE} stroke={LINE} />
-      <rect className="murk" x="64" y="70" width="162" height="276" rx="18" fill="#6d5a36" opacity=".35" />
-      {dots.map((d, i) => (
-        <circle key={i} className="dirt" cx={d.x} cy={d.y} r={d.r} fill="#a68a55" opacity=".8" />
+      <rect x="50" y="50" width="150" height="220" rx="20" fill={SURFACE} stroke={LINE} />
+      <rect className="clean" x="54" y="68" width="142" height="198" rx="16" fill="#1f6fa3" opacity=".45" />
+      {sparks.map((d, i) => (
+        <circle key={i} className="spark" cx={d.x} cy={d.y} r={d.r} fill={INK} opacity="0" />
       ))}
-      <path className="flow-slow" d="M80 70 Q145 60 210 70" stroke={W} strokeOpacity=".4" fill="none" />
-      <line x1="270" y1="80" x2="270" y2="320" stroke={LINE} />
-      {steps.map((s, i) => (
-        <g key={s} className="step">
-          <circle className="step-dot" cx="270" cy={80 + i * 60} r="6" fill={LINE} />
-          <text x="286" y={84 + i * 60} fill={INK} fontSize="12">
-            {s}
+      <path className="flow-slow" d="M66 68 Q125 58 184 68" stroke={W} strokeOpacity=".5" fill="none" />
+      <line x1="250" y1="62" x2="250" y2="238" stroke={LINE} />
+      {steps.map((st, i) => (
+        <g key={st} className="step">
+          <circle className="step-dot" cx="250" cy={62 + i * 44} r="6" fill={LINE} />
+          <text x="266" y={66 + i * 44} fill={INK} fontSize="12">
+            {st}
           </text>
         </g>
       ))}
-      <text x="60" y="380" fill={W} fontSize="10" letterSpacing="3">
-        RAW → TREATMENT → CLEAN
+      {/* гарах шугам → гудамж → айл өрх */}
+      <path d="M200 250 H222 V336 H392" stroke={LINE} strokeWidth="5" fill="none" strokeLinecap="round" />
+      <path className="pipe" d="M200 250 H222 V336 H392" pathLength={1} strokeDasharray="1" stroke={W} strokeWidth="3" fill="none" strokeLinecap="round" />
+      {blocks.map((b) => (
+        <g key={b.x}>
+          <rect x={b.x} y={330 - b.h} width="28" height={b.h} fill="#1b4a70" stroke={LINE} />
+          {Array.from({ length: b.rows * 2 }, (_, k) => (
+            <rect key={k} className="win" x={b.x + 5 + (k % 2) * 11} y={330 - b.h + 6 + Math.floor(k / 2) * 9} width="7" height="5" fill="#10263b" />
+          ))}
+        </g>
+      ))}
+      {/* гэр */}
+      {[362, 386].map((x) => (
+        <g key={x}>
+          <path d={`M${x - 10} 330 V322 L${x} 314 L${x + 10} 322 V330 Z`} fill="#cfdde7" stroke={LINE} />
+          <rect className="win" x={x - 2} y="323" width="4" height="7" fill="#10263b" />
+        </g>
+      ))}
+      <text x="50" y="380" fill={W} fontSize="10" letterSpacing="3">
+        CLEAN → FILTER → HOMES
       </text>
     </svg>
   );
@@ -214,20 +240,8 @@ export function TreatmentVisual() {
 
 /* 2.4 — Усан сан: scroll хийхэд усны түвшин дээшилнэ */
 export function ReservoirVisual() {
-  const pct = useRef<SVGTextElement>(null);
   const ref = useScrub<SVGSVGElement>((tl, q) => {
-    const state = { v: 12 };
-    tl.fromTo(q(".level"), { y: 220 }, { y: 30, ease: "none" }, 0).to(
-      state,
-      {
-        v: 86,
-        ease: "none",
-        onUpdate: () => {
-          if (pct.current) pct.current.textContent = `${Math.round(state.v)}%`;
-        },
-      },
-      0,
-    );
+    tl.fromTo(q(".level"), { y: 220 }, { y: 30, ease: "none" }, 0);
   });
   return (
     <svg ref={ref} viewBox="0 0 400 400" className="h-full w-full">
@@ -255,12 +269,6 @@ export function ReservoirVisual() {
       {[150, 200, 250].map((y) => (
         <line key={y} x1="300" y1={y} x2="312" y2={y} stroke={MIST} strokeOpacity=".6" />
       ))}
-      <text ref={pct} x="200" y="220" fill={INK} fontSize="42" textAnchor="middle" fontWeight="700">
-        12%
-      </text>
-      <text x="200" y="245" fill={INK} fillOpacity=".7" fontSize="10" textAnchor="middle" letterSpacing="3">
-        НӨӨЦ
-      </text>
       <style>{`@keyframes wave{from{transform:translateX(0)}to{transform:translateX(-100px)}}`}</style>
     </svg>
   );

@@ -11,7 +11,20 @@ const GAP = 40;
  * Усны аяллын хэвтээ хуудаслалт: шат солигдоход идэвхтэй цэгээс дусал нуман замаар дараагийн цэг рүү
  * үсэрч, буусан газарт долгион тарж цэг дүүрнэ.
  */
-export default function DripDots({ items, active }: { items: { id: string; label: string }[]; active: number }) {
+export default function DripDots({
+  items,
+  active,
+  label = "Усны аяллын шатууд",
+  reverse = false,
+}: {
+  items: readonly { id: string; label: string }[];
+  active: number;
+  /** nav-ийн нэр (дэлгэц уншигчид) */
+  label?: string;
+  /** true — 1-р шат баруун талд, дараагийнх нь зүүн тийш (зүүн тийш явдаг аялал) */
+  reverse?: boolean;
+}) {
+  const at = (i: number) => (reverse ? items.length - 1 - i : i) * GAP;
   const box = useRef<HTMLDivElement>(null);
   const drop = useRef<HTMLSpanElement>(null);
   const fills = useRef<(HTMLSpanElement | null)[]>([]);
@@ -39,7 +52,7 @@ export default function DripDots({ items, active }: { items: { id: string; label
       gsap.fromTo(toFill, { scale: 0 }, { scale: 1, duration: 0.7, ease: "elastic.out(1, 0.45)", overwrite: true });
       const ring = document.createElement("span");
       ring.className = "drip-ripple";
-      ring.style.left = `${to * GAP + 8}px`;
+      ring.style.left = `${at(to) + 8}px`;
       ring.style.top = "8px";
       box.current!.append(ring);
       ring.animate(
@@ -58,8 +71,8 @@ export default function DripDots({ items, active }: { items: { id: string; label
     const dur = 0.42 + 0.08 * dist;
     gsap
       .timeline()
-      .set(drop.current, { x: from * GAP, y: 0, opacity: 1, scaleX: 1, scaleY: 1 })
-      .to(drop.current, { x: to * GAP, duration: dur, ease: "power1.inOut" }, 0)
+      .set(drop.current, { x: at(from), y: 0, opacity: 1, scaleX: 1, scaleY: 1 })
+      .to(drop.current, { x: at(to), duration: dur, ease: "power1.inOut" }, 0)
       .to(drop.current, { y: -18 - 4 * dist, duration: dur / 2, ease: "sine.out" }, 0)
       .to(drop.current, { y: 0, duration: dur / 2, ease: "sine.in" }, dur / 2)
       .to(drop.current, { scaleX: 1.5, scaleY: 0.8, duration: dur / 2, ease: "sine.inOut", yoyo: true, repeat: 1 }, 0)
@@ -68,7 +81,7 @@ export default function DripDots({ items, active }: { items: { id: string; label
   }, [active]);
 
   return (
-    <nav aria-label="Усны аяллын шатууд" className="drip-nav absolute bottom-8 left-1/2 z-20 -translate-x-1/2">
+    <nav aria-label={label} className="drip-nav absolute bottom-8 left-1/2 z-20 -translate-x-1/2">
       <div ref={box} className="relative h-4" style={{ width: (items.length - 1) * GAP + 16 }}>
         {items.map((s, i) => (
           <a
@@ -77,7 +90,7 @@ export default function DripDots({ items, active }: { items: { id: string; label
             aria-label={s.label}
             aria-current={i === active ? "step" : undefined}
             className="drip-dot group absolute top-0 h-4 w-4"
-            style={{ left: i * GAP }}
+            style={{ left: at(i) }}
           >
             <span className="drip-dot__ring" />
             <span

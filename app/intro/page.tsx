@@ -5,11 +5,13 @@ import Hero from "@/components/sections/Hero";
 import WaterJourney from "@/components/sections/WaterJourney";
 import DropReveal from "@/components/sections/DropReveal";
 import About from "@/components/sections/About";
-import Services from "@/components/sections/Services";
+import SmartServices from "@/components/sections/SmartServices";
 import WaterQuality from "@/components/sections/WaterQuality";
 import CityMap from "@/components/sections/CityMap";
 import Values from "@/components/sections/Values";
 import Contact from "@/components/sections/Contact";
+import WaterEdge from "@/components/sections/services/WaterEdge";
+import { RESPECT_REDUCED_MOTION } from "@/lib/motion";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -24,18 +26,28 @@ export default function Intro() {
       <SmoothScroll />
       <Navbar />
       <main>
+        {/* шумбалт: усан доор Алсын хараа → Эрхэм зорилго → Үнэт зүйлс (Hero.tsx, values/ValuesDive.tsx) */}
         <Hero />
+        {/* хөдөлгөөн багасгах горимд шумбалтгүй — тэр агуулга энд энгийн хэсэг болно */}
+        {RESPECT_REDUCED_MOTION && (
+          <div className="theme-light hidden bg-foam text-abyss motion-reduce:block">
+            <Values />
+          </div>
+        )}
         <WaterJourney />
         {/* Аяллын дусал томорч цайвар (light) хэсгүүдийг нээнэ — уснаас гарахад эхлээд дроны бичлэг (Бидний тухай) */}
         <DropReveal>
           <About />
-          <Services />
+          <SmartServices />
           <WaterQuality />
           <CityMap />
-          <Values />
         </DropReveal>
       </main>
-      <div className="theme-light bg-foam text-abyss">
+      <div className="theme-light relative z-30 bg-foam text-abyss">
+        {/* дээд ирмэг: тайван усны гадаргуу хотын мапын дээгүүр доороос бүрхэж гарна (мап удаан гүйж бараанна — CityMap.tsx) */}
+        <div aria-hidden className="absolute inset-x-0 top-0 h-0" style={{ "--svc-top": "#f5fbff" } as React.CSSProperties}>
+          <WaterEdge variant="calm" />
+        </div>
         <Contact />
       </div>
       <DropCursor />

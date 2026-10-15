@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { ambientOn, stageProgress, type JourneyRuntime } from "./runtime";
-import { STAGES } from "./stages";
 import { poseCamera } from "./JourneyCamera";
 import { hideUnseenLabels, projectLabels } from "./JourneyLabels";
 import { createViewMaskMaterial } from "./materials/fx";
@@ -98,8 +97,9 @@ export default function ViewRenderer({ rt, onRendered }: { rt: JourneyRuntime; o
         const g = rt.roots[k];
         if (g) g.visible = k === view.stage && p > 0.001;
       }
-      if (rt.floor) rt.floor.position.y = STAGES[view.stage].floorY;
-      poseCamera(cam, view.stage, p, r.w / r.h, extraAz, extraEl);
+      const stage = rt.stages[view.stage];
+      if (rt.floor) rt.floor.position.y = stage.floorY;
+      poseCamera(cam, stage.camera, p, r.w / r.h, extraAz, extraEl);
       gl.render(scene, cam);
       projectLabels(rt, cam, view, r, clip, p, seen);
 

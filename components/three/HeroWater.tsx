@@ -40,7 +40,7 @@ const updateFrag = /* glsl */ `
       texture2D(uState, vUv - vec2(0.0, uTexel.y)).r
     ) * 0.25;
     s.g += (avg - s.r) * 2.0;
-    s.g *= 0.993;
+    s.g *= 0.988;
     s.r += s.g;
     s.r *= 0.998;
     gl_FragColor = s;
@@ -145,8 +145,8 @@ const fragment = /* glsl */ `
       fbm(p * 2.6 + vec2(5.2 - t * 0.09, 1.7 + t * 0.12))
     ) - 0.5;
     // эхэндээ ус долгиотой, аажмаар тогтоно; ойртох тусам долгио нэмэгдэнэ
-    float rough = mix(4.0, 1.0, uIntro) + 2.0 * smoothstep(0.0, 0.3, d);
-    vec2 off = wave * 0.01 * rough + rip * 0.25;
+    float rough = mix(2.5, 0.7, uIntro) + 1.5 * smoothstep(0.0, 0.3, d);
+    vec2 off = wave * 0.01 * rough + rip * 0.08;
 
     // ёроол: гүн, гүехэн өнгө
     vec2 fp = p + off * vec2(aspect, 1.0);
@@ -166,8 +166,8 @@ const fragment = /* glsl */ `
     col = mix(col, vec3(1.0), c * (0.6 - 0.3 * depth) * (1.0 - 0.55 * title.a * show));
 
     // гадаргуу: долгионы налуу, гялбаа, хулганы гэрэл
-    col *= 1.0 + dot(rip, vec2(-0.8, 2.4));
-    vec3 nrm = normalize(vec3(-(wave * rough * 0.5 + rip * 10.0), 1.0));
+    col *= 1.0 + dot(rip, vec2(-0.5, 1.5));
+    vec3 nrm = normalize(vec3(-(wave * rough * 0.5 + rip * 6.0), 1.0));
     col += pow(max(dot(nrm, normalize(vec3(0.15, 0.5, 0.85))), 0.0), 90.0);
     col += smoothstep(0.93, 0.995, noise(p * vec2(28.0, 34.0) + wave * 6.0 + t * 0.6)) * 0.3;
     col = mix(col, vec3(1.0), exp(-length(p - uMouse * vec2(aspect, 1.0)) * 2.6) * 0.18);
@@ -179,7 +179,7 @@ const fragment = /* glsl */ `
 
     // 2) усан доор: гүн рүү орох тусам харанхуйлна — цацраг суларч, тоосонцор хөвнө, гарчиг живнэ
     if (d > 0.1) {
-      vec2 q = uv + vec2(sin(uv.y * 11.0 + t * 1.4), cos(uv.x * 8.0 + t * 1.1)) * 0.004 + rip * 0.2;
+      vec2 q = uv + vec2(sin(uv.y * 11.0 + t * 1.4), cos(uv.x * 8.0 + t * 1.1)) * 0.004 + rip * 0.1;
       float deep = smoothstep(0.25, 0.85, d);
       vec3 top = mix(vec3(0.20, 0.55, 0.80), vec3(0.04, 0.20, 0.36), deep);
       vec3 bottom = mix(vec3(0.06, 0.30, 0.52), vec3(0.008, 0.05, 0.11), deep);
@@ -371,7 +371,7 @@ function Water({ title, dive, reduced, onReady }: Omit<Props, "running">) {
       // Эхлэл: голд том дусал унаж, ус тогтохын хэрээр гарчиг тодорно
       if (!reduced) {
         gsap.to(uniforms.uIntro, { value: 1, duration: 3.2, ease: "power2.out", delay: 0.2 });
-        gsap.delayedCall(0.35, () => drops.current.push({ x: 0.5, y: 0.5, r: 0.08, s: 1.6 }));
+        gsap.delayedCall(0.35, () => drops.current.push({ x: 0.5, y: 0.5, r: 0.08, s: 1.0 }));
       }
     });
     return () => {
@@ -400,11 +400,11 @@ function Water({ title, dive, reduced, onReady }: Omit<Props, "running">) {
       if (!p.inside || dist < 12) return;
       lx = e.clientX;
       ly = e.clientY;
-      drops.current.push({ x: p.x, y: p.y, r: 0.02, s: Math.min(dist / 40, 0.9) });
+      drops.current.push({ x: p.x, y: p.y, r: 0.02, s: Math.min(dist / 90, 0.35) });
     };
     const onDown = (e: PointerEvent) => {
       const p = at(e);
-      if (p.inside) drops.current.push({ x: p.x, y: p.y, r: 0.04, s: 1.6 });
+      if (p.inside) drops.current.push({ x: p.x, y: p.y, r: 0.04, s: 0.9 });
     };
     window.addEventListener("pointermove", onMove, { passive: true });
     window.addEventListener("pointerdown", onDown, { passive: true });
@@ -440,7 +440,7 @@ function Water({ title, dive, reduced, onReady }: Omit<Props, "running">) {
         x: 0.05 + Math.random() * 0.9,
         y: 0.05 + Math.random() * 0.9,
         r: 0.01 + Math.random() * 0.012,
-        s: 0.25 + Math.random() * 0.25,
+        s: 0.12 + Math.random() * 0.12,
       });
       nextRain.current = t + 0.8 + Math.random() * 2.2;
     }
